@@ -1,8 +1,6 @@
-# authentication/models.py
 from django.db import models
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
-
 
 
 # Enum para tipos de usuario
@@ -28,7 +26,6 @@ class CustomUserManager(BaseUserManager):
         extra_fields.setdefault('tipo_usuario', TipoUsuario.DIRECTOR)
         return self.create_user(email, password, **extra_fields)
 
-# Usuario mantiene herencia de BaseEntity
 
 class Usuario(AbstractBaseUser, PermissionsMixin):
     id = models.AutoField(primary_key=True)
@@ -53,7 +50,6 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     class Meta:
         db_table = 'usuarios'
 
-# Los perfiles NO heredan de BaseEntity
 
 class Director(models.Model):
     usuario = models.OneToOneField(

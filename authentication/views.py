@@ -6,7 +6,6 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import LoginSerializer
 
 
-
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_view(request):
