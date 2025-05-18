@@ -1,17 +1,20 @@
-## Script de prueba
-
 import os
-import django
 import sys
+import django
+from pathlib import Path
+from datetime import date
+from authentication.models import Usuario, Director
+
+# Obtener la ruta del directorio raíz del proyecto
+# Subir dos niveles: scripts/data_creation/ -> scripts/ -> backend_colegio/
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+
+# Agregar la ruta raíz al Python path
+sys.path.insert(0, str(PROJECT_ROOT))
 
 # Configurar Django
-sys.path.append('.')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend_colegio.settings')
 django.setup()
-
-from authentication.models import Usuario, Director
-from datetime import date
-
 
 def create_directors():
     print("🏫 Creando directores de prueba para el sistema académico...")
