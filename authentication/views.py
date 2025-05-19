@@ -1,14 +1,21 @@
-from .models import Usuario
+from django.db.models import Q
+from datetime import timedelta
 from rest_framework import status
 from django.utils import timezone
-from .serializers import LoginSerializer
+from shared.permissions import IsDirector
+from django.core.paginator import Paginator
 from rest_framework.response import Response
+from .models import Usuario, Profesor, Alumno
 from audit.utils import registrar_accion_bitacora
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from .serializers import (
+    LoginSerializer, ProfesorSerializer, ProfesorListSerializer,
+    AlumnoSerializer, AlumnoListSerializer
+)
 
 
 @api_view(['POST'])
@@ -20,7 +27,6 @@ def login_view(request):
         user = serializer.validated_data['user']
         refresh = RefreshToken.for_user(user)
 
-        # AGREGAR: Registrar login en bitácora
         registrar_accion_bitacora(user, 'LOGIN', request)
 
         return Response({
@@ -93,8 +99,8 @@ def user_activity(request):
     if request.user.tipo_usuario != 'director':
         return Response({'error': 'No autorizado'}, status=403)
 
-    from django.db.models import Q
-    from datetime import timedelta
+    # from django.db.models import Q
+    # from datetime import timedelta
 
     # Usuarios activos en los últimos 30 días
     fecha_limite = timezone.now() - timedelta(days=30)
@@ -131,4 +137,295 @@ def user_activity(request):
     }
 
     return Response(data)
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsDirector])
+def profesor_list_create(request):
+    """
+    GET: Listar profesores con paginación y filtros
+    POST: Crear nuevo profesor
+    """
+    if request.method == 'GET':
+        # Parámetros de consulta
+        page = request.GET.get('page', 1)
+        page_size = request.GET.get('page_size', 20)
+        search = request.GET.get('search', '')
+        especialidad = request.GET.get('especialidad', '')
+        activo = request.GET.get('activo', '')
+
+        # Filtrar profesores
+        queryset = Profesor.objects.all().select_related('usuario').order_by('-created_at')
+
+        if search:
+            queryset = queryset.filter(
+                Q(nombres__icontains=search) |
+                Q(apellidos__icontains=search) |
+                Q(usuario__email__icontains=search) |
+                Q(cedula_identidad__icontains=search)
+            )
+
+        if especialidad:
+            queryset = queryset.filter(especialidad__icontains=especialidad)
+
+        if activo:
+            activo_bool = activo.lower() == 'true'
+            queryset = queryset.filter(usuario__activo=activo_bool)
+
+        # Paginar
+        paginator = Paginator(queryset, page_size)
+        page_obj = paginator.get_page(page)
+
+        # Serializar
+        serializer = ProfesorListSerializer(page_obj.object_list, many=True)
+
+        return Response({
+            'count': paginator.count,
+            'total_pages': paginator.num_pages,
+            'current_page': page_obj.number,
+            'next': page_obj.has_next(),
+            'previous': page_obj.has_previous(),
+            'results': serializer.data
+        })
+
+    elif request.method == 'POST':
+        serializer = ProfesorSerializer(data=request.data)
+        if serializer.is_valid():
+            profesor = serializer.save()
+
+            # Registrar en bitácora
+            registrar_accion_bitacora(
+                request.user,
+                f'CREAR_PROFESOR: {profesor.nombres} {profesor.apellidos}',
+                request
+            )
+
+            return Response(
+                ProfesorSerializer(profesor).data,
+                status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
+@permission_classes([IsDirector])
+def profesor_detail(request, pk):
+    """
+    GET: Ver detalle de profesor
+    PUT: Actualizar profesor completo
+    PATCH: Actualizar profesor parcial
+    DELETE: Eliminar profesor
+    """
+    try:
+        profesor = Profesor.objects.select_related('usuario').get(pk=pk)
+    except Profesor.DoesNotExist:
+        return Response(
+            {'error': 'Profesor no encontrado'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    if request.method == 'GET':
+        serializer = ProfesorSerializer(profesor)
+        return Response(serializer.data)
+
+    elif request.method in ['PUT', 'PATCH']:
+        partial = request.method == 'PATCH'
+        serializer = ProfesorSerializer(profesor, data=request.data, partial=partial)
+
+        if serializer.is_valid():
+            profesor_updated = serializer.save()
+
+            # Registrar en bitácora
+            registrar_accion_bitacora(
+                request.user,
+                f'ACTUALIZAR_PROFESOR: {profesor_updated.nombres} {profesor_updated.apellidos}',
+                request
+            )
+
+            return Response(ProfesorSerializer(profesor_updated).data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == 'DELETE':
+        nombre_completo = f"{profesor.nombres} {profesor.apellidos}"
+        email = profesor.usuario.email
+
+        # Eliminar profesor (cascade eliminará usuario)
+        profesor.delete()
+
+        # Registrar en bitácora
+        registrar_accion_bitacora(
+            request.user,
+            f'ELIMINAR_PROFESOR: {nombre_completo} ({email})',
+            request
+        )
+
+        return Response(
+            {'message': 'Profesor eliminado exitosamente'},
+            status=status.HTTP_204_NO_CONTENT
+        )
+
+
+# Vistas CRUD para Alumnos
+@api_view(['GET', 'POST'])
+@permission_classes([IsDirector])
+def alumno_list_create(request):
+    """
+    GET: Listar alumnos con paginación y filtros
+    POST: Crear nuevo alumno
+    """
+    if request.method == 'GET':
+        # Parámetros de consulta
+        page = request.GET.get('page', 1)
+        page_size = request.GET.get('page_size', 20)
+        search = request.GET.get('search', '')
+        grupo = request.GET.get('grupo', '')
+        nivel = request.GET.get('nivel', '')
+        activo = request.GET.get('activo', '')
+
+        # Filtrar alumnos
+        queryset = Alumno.objects.all().select_related(
+            'usuario', 'grupo', 'grupo__nivel'
+        ).order_by('-created_at')
+
+        if search:
+            queryset = queryset.filter(
+                Q(nombres__icontains=search) |
+                Q(apellidos__icontains=search) |
+                Q(usuario__email__icontains=search) |
+                Q(matricula__icontains=search)
+            )
+
+        if grupo:
+            queryset = queryset.filter(grupo_id=grupo)
+
+        if nivel:
+            queryset = queryset.filter(grupo__nivel__numero=nivel)
+
+        if activo:
+            activo_bool = activo.lower() == 'true'
+            queryset = queryset.filter(usuario__activo=activo_bool)
+
+        # Paginar
+        paginator = Paginator(queryset, page_size)
+        page_obj = paginator.get_page(page)
+
+        # Serializar
+        serializer = AlumnoListSerializer(page_obj.object_list, many=True)
+
+        return Response({
+            'count': paginator.count,
+            'total_pages': paginator.num_pages,
+            'current_page': page_obj.number,
+            'next': page_obj.has_next(),
+            'previous': page_obj.has_previous(),
+            'results': serializer.data
+        })
+
+    elif request.method == 'POST':
+        serializer = AlumnoSerializer(data=request.data)
+        if serializer.is_valid():
+            alumno = serializer.save()
+
+            # Registrar en bitácora
+            registrar_accion_bitacora(
+                request.user,
+                f'CREAR_ALUMNO: {alumno.nombres} {alumno.apellidos} - {alumno.matricula}',
+                request
+            )
+
+            return Response(
+                AlumnoSerializer(alumno).data,
+                status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
+@permission_classes([IsDirector])
+def alumno_detail(request, pk):
+    """
+    GET: Ver detalle de alumno
+    PUT: Actualizar alumno completo
+    PATCH: Actualizar alumno parcial
+    DELETE: Eliminar alumno
+    """
+    try:
+        alumno = Alumno.objects.select_related(
+            'usuario', 'grupo', 'grupo__nivel'
+        ).get(pk=pk)
+    except Alumno.DoesNotExist:
+        return Response(
+            {'error': 'Alumno no encontrado'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    if request.method == 'GET':
+        serializer = AlumnoSerializer(alumno)
+        return Response(serializer.data)
+
+    elif request.method in ['PUT', 'PATCH']:
+        partial = request.method == 'PATCH'
+        serializer = AlumnoSerializer(alumno, data=request.data, partial=partial)
+
+        if serializer.is_valid():
+            alumno_updated = serializer.save()
+
+            # Registrar en bitácora
+            registrar_accion_bitacora(
+                request.user,
+                f'ACTUALIZAR_ALUMNO: {alumno_updated.nombres} {alumno_updated.apellidos}',
+                request
+            )
+
+            return Response(AlumnoSerializer(alumno_updated).data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == 'DELETE':
+        nombre_completo = f"{alumno.nombres} {alumno.apellidos}"
+        matricula = alumno.matricula
+        email = alumno.usuario.email
+
+        # Eliminar alumno (cascade eliminará usuario)
+        alumno.delete()
+
+        # Registrar en bitácora
+        registrar_accion_bitacora(
+            request.user,
+            f'ELIMINAR_ALUMNO: {nombre_completo} - {matricula} ({email})',
+            request
+        )
+
+        return Response(
+            {'message': 'Alumno eliminado exitosamente'},
+            status=status.HTTP_204_NO_CONTENT
+        )
+
+
+# Vista de estadísticas básicas
+@api_view(['GET'])
+@permission_classes([IsDirector])
+def dashboard_director(request):
+    """Dashboard básico para directores"""
+    from academic.models import Materia, Aula
+
+    stats = {
+        'total_profesores': Profesor.objects.count(),
+        'profesores_activos': Profesor.objects.filter(usuario__activo=True).count(),
+        'total_alumnos': Alumno.objects.count(),
+        'alumnos_activos': Alumno.objects.filter(usuario__activo=True).count(),
+        'total_materias': Materia.objects.count(),
+        'total_aulas': Aula.objects.count(),
+        'usuarios_total': Usuario.objects.count(),
+        'usuarios_activos': Usuario.objects.filter(activo=True).count(),
+    }
+
+    # Últimos profesores registrados
+    ultimos_profesores = Profesor.objects.select_related('usuario').order_by('-created_at')[:5]
+    ultimos_alumnos = Alumno.objects.select_related('usuario').order_by('-created_at')[:5]
+
+    return Response({
+        'estadisticas': stats,
+        'ultimos_profesores': ProfesorListSerializer(ultimos_profesores, many=True).data,
+        'ultimos_alumnos': AlumnoListSerializer(ultimos_alumnos, many=True).data,
+    })
 
