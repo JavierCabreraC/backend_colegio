@@ -1,9 +1,11 @@
+from .models import Usuario
 from rest_framework import status
+from django.utils import timezone
 from .serializers import LoginSerializer
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
 from audit.utils import registrar_accion_bitacora
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
@@ -80,3 +82,53 @@ def logout_view(request):
             {'error': f'Error en logout: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_activity(request):
+    """
+    Ver actividad de usuarios (solo directores)
+    """
+    if request.user.tipo_usuario != 'director':
+        return Response({'error': 'No autorizado'}, status=403)
+
+    from django.db.models import Q
+    from datetime import timedelta
+
+    # Usuarios activos en los últimos 30 días
+    fecha_limite = timezone.now() - timedelta(days=30)
+    usuarios_activos = Usuario.objects.filter(
+        last_login__gte=fecha_limite
+    ).order_by('-last_login')
+
+    # Usuarios que nunca se han logueado
+    usuarios_sin_login = Usuario.objects.filter(
+        Q(last_login__isnull=True)
+    )
+
+    data = {
+        'usuarios_activos_30_dias': [
+            {
+                'email': user.email,
+                'tipo': user.tipo_usuario,
+                'last_login': user.last_login,
+                'dias_desde_login': (timezone.now() - user.last_login).days if user.last_login else None
+            }
+            for user in usuarios_activos
+        ],
+        'usuarios_sin_login': [
+            {
+                'email': user.email,
+                'tipo': user.tipo_usuario,
+                'created_at': user.created_at
+            }
+            for user in usuarios_sin_login
+        ],
+        'total_usuarios': Usuario.objects.count(),
+        'usuarios_activos': usuarios_activos.count(),
+        'usuarios_inactivos': usuarios_sin_login.count()
+    }
+
+    return Response(data)
+
