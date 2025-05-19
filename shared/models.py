@@ -1,7 +1,6 @@
 from django.db import models
 
 
-
 class BaseEntity(models.Model):
     """
     Clase base abstracta que proporciona campos comunes

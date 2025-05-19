@@ -1,7 +1,5 @@
-# Create your models here.
 from django.db import models
 from shared.models import BaseEntity
-
 
 
 class Nivel(BaseEntity):

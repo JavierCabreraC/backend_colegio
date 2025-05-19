@@ -2,7 +2,6 @@ from django.db import models
 from shared.models import BaseEntity
 
 
-
 class Examen(BaseEntity):
     profesor_materia = models.ForeignKey('academic.ProfesorMateria', on_delete=models.CASCADE)
     trimestre = models.ForeignKey('academic.Trimestre', on_delete=models.CASCADE)
