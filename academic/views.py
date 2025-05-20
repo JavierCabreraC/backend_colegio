@@ -61,7 +61,7 @@ def materia_list_create(request):
             # Registrar en bitácora
             registrar_accion_bitacora(
                 request.user,
-                f'CREAR_MATERIA: {materia.codigo} - {materia.nombre}',
+                f'CREAR_MATERIA: {materia.codigo}',
                 request
             )
 

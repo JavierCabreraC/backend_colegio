@@ -176,6 +176,12 @@ def profesor_list_create(request):
         paginator = Paginator(queryset, page_size)
         page_obj = paginator.get_page(page)
 
+        registrar_accion_bitacora(
+            request.user,
+            f'LISTAR_PROFESORES',
+            request
+        )
+
         # Serializar
         serializer = ProfesorListSerializer(page_obj.object_list, many=True)
 
