@@ -28,7 +28,7 @@ def bitacora_list(request):
     usuario_id = request.GET.get('usuario_id', None)
 
     # Filtrar registros
-    queryset = Bitacora.objects.all().order_by('-fecha_hora')
+    # queryset = Bitacora.objects.all().order_by('-fecha_hora')
 
     if tipo_accion:
         queryset = queryset.filter(tipo_accion=tipo_accion)

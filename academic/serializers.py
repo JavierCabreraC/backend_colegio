@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import (
     Nivel, Grupo, Materia, Aula, ProfesorMateria,
-    Gestion, Trimestre, Horario, Matriculacion
+    Gestion, Trimestre
 )
 
 
@@ -128,6 +128,10 @@ class AulaListSerializer(serializers.ModelSerializer):
     def get_horarios_count(self, obj):
         return obj.horario_set.count()
 
+
+# *******************************************************************************************************************
+# *******************************************************************************************************************
+# *******************************************************************************************************************
 
 # Serializers adicionales para referencias
 

@@ -5,13 +5,13 @@ from shared.permissions import IsDirector
 from django.core.paginator import Paginator
 from rest_framework.response import Response
 from .models import Materia, Aula, Nivel, Grupo
+from audit.utils import registrar_accion_bitacora
 from rest_framework.decorators import api_view, permission_classes
 from .serializers import (
     MateriaSerializer, MateriaListSerializer,
     AulaSerializer, AulaListSerializer,
     NivelSerializer, GrupoSerializer
 )
-from audit.utils import registrar_accion_bitacora
 
 
 @api_view(['GET', 'POST'])

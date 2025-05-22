@@ -2,7 +2,7 @@ from django.utils import timezone
 from audit.models import Bitacora
 from django.dispatch import receiver
 from django.db.models.signals import post_save
-# from rest_framework_simplejwt.models import TokenUser
+from rest_framework_simplejwt.models import TokenUser
 
 
 @receiver(post_save, sender=Bitacora)
