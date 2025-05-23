@@ -202,7 +202,7 @@ def profesor_list_create(request):
             # Registrar en bitácora
             registrar_accion_bitacora(
                 request.user,
-                f'CREAR_PROFESOR: {profesor.nombres} {profesor.apellidos}',
+                f'CREAR_PROFESOR',
                 request
             )
 
@@ -244,7 +244,7 @@ def profesor_detail(request, pk):
             # Registrar en bitácora
             registrar_accion_bitacora(
                 request.user,
-                f'ACTUALIZAR_PROFESOR: {profesor_updated.nombres} {profesor_updated.apellidos}',
+                f'ACTUALIZAR_PROFESOR',
                 request
             )
 
@@ -261,7 +261,7 @@ def profesor_detail(request, pk):
         # Registrar en bitácora
         registrar_accion_bitacora(
             request.user,
-            f'ELIMINAR_PROFESOR: {nombre_completo} ({email})',
+            f'ELIMINAR_PROFESOR',
             request
         )
 
@@ -335,7 +335,7 @@ def alumno_list_create(request):
             # Registrar en bitácora
             registrar_accion_bitacora(
                 request.user,
-                f'CREAR_ALUMNO: {alumno.nombres} {alumno.apellidos} - {alumno.matricula}',
+                f'CREAR_ALUMNO: {alumno.matricula}',
                 request
             )
 
@@ -379,7 +379,7 @@ def alumno_detail(request, pk):
             # Registrar en bitácora
             registrar_accion_bitacora(
                 request.user,
-                f'ACTUALIZAR_ALUMNO: {alumno_updated.nombres} {alumno_updated.apellidos}',
+                f'ACTUALIZAR_ALUMNO',
                 request
             )
 
@@ -397,7 +397,7 @@ def alumno_detail(request, pk):
         # Registrar en bitácora
         registrar_accion_bitacora(
             request.user,
-            f'ELIMINAR_ALUMNO: {nombre_completo} - {matricula} ({email})',
+            f'ELIMINAR_ALUMNO: {matricula}',
             request
         )
 

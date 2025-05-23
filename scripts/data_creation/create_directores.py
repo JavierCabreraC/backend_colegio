@@ -5,6 +5,7 @@ from pathlib import Path
 from datetime import date
 from authentication.models import Usuario, Director
 
+
 # Obtener la ruta del directorio raíz del proyecto
 # Subir dos niveles: scripts/data_creation/ -> scripts/ -> backend_colegio/
 PROJECT_ROOT = Path(__file__).parent.parent.parent

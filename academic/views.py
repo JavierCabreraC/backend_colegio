@@ -103,7 +103,7 @@ def materia_detail(request, pk):
             # Registrar en bitácora
             registrar_accion_bitacora(
                 request.user,
-                f'ACTUALIZAR_MATERIA: {materia_updated.codigo} - {materia_updated.nombre}',
+                f'ACTUALIZAR_MATERIA: {materia_updated.codigo}',
                 request
             )
 
@@ -127,7 +127,7 @@ def materia_detail(request, pk):
         # Registrar en bitácora
         registrar_accion_bitacora(
             request.user,
-            f'ELIMINAR_MATERIA: {codigo} - {nombre}',
+            f'ELIMINAR_MATERIA: {codigo}',
             request
         )
 
@@ -193,7 +193,7 @@ def aula_list_create(request):
             # Registrar en bitácora
             registrar_accion_bitacora(
                 request.user,
-                f'CREAR_AULA: {aula.nombre} (Capacidad: {aula.capacidad})',
+                f'CREAR_AULA: {aula.nombre}',
                 request
             )
 
@@ -235,7 +235,7 @@ def aula_detail(request, pk):
             # Registrar en bitácora
             registrar_accion_bitacora(
                 request.user,
-                f'ACTUALIZAR_AULA: {aula_updated.nombre}',
+                f'ACTUALIZAR_AULA',
                 request
             )
 
@@ -258,7 +258,7 @@ def aula_detail(request, pk):
         # Registrar en bitácora
         registrar_accion_bitacora(
             request.user,
-            f'ELIMINAR_AULA: {nombre}',
+            f'ELIMINAR_AULA',
             request
         )
 
@@ -286,7 +286,7 @@ def nivel_list_create(request):
 
             registrar_accion_bitacora(
                 request.user,
-                f'CREAR_NIVEL: {nivel.numero}° - {nivel.nombre}',
+                f'CREAR_NIVEL: {nivel.numero}°',
                 request
             )
 
@@ -318,7 +318,7 @@ def grupo_list_create(request):
 
             registrar_accion_bitacora(
                 request.user,
-                f'CREAR_GRUPO: {grupo.nivel.numero}° {grupo.letra}',
+                f'CREAR_GRUPO: {grupo.nivel.numero}°',
                 request
             )
 
