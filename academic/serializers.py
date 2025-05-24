@@ -85,7 +85,7 @@ class MateriaListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Materia
         fields = [
-            'id', 'codigo', 'nombre', 'horas_semanales', 'total_profesores'
+            'id', 'codigo', 'nombre', 'descripcion', 'horas_semanales', 'total_profesores'
         ]
 
     def get_total_profesores(self, obj):

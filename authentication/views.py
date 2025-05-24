@@ -1,3 +1,5 @@
+import json
+import logging
 from django.db.models import Q
 from datetime import timedelta
 from rest_framework import status
@@ -17,6 +19,7 @@ from .serializers import (
     AlumnoSerializer, AlumnoListSerializer
 )
 
+logger = logging.getLogger(__name__)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -146,6 +149,15 @@ def profesor_list_create(request):
     GET: Listar profesores con paginación y filtros
     POST: Crear nuevo profesor
     """
+
+    if request.method == 'POST':
+        print(f"\n{'=' * 50}")
+        print(f"🔍 PAYLOAD RECIBIDO - Método: {request.method}")
+        print(f"📍 Endpoint: {request.path}")
+        print(f"📦 Data recibida:")
+        print(json.dumps(request.data, indent=2, ensure_ascii=False, default=str))
+        print(f"{'=' * 50}\n")
+
     if request.method == 'GET':
         # Parámetros de consulta
         page = request.GET.get('page', 1)
@@ -197,20 +209,34 @@ def profesor_list_create(request):
     elif request.method == 'POST':
         serializer = ProfesorSerializer(data=request.data)
         if serializer.is_valid():
-            profesor = serializer.save()
+            print(f"✅ Datos validados correctamente para creación")
+            try:
+                profesor = serializer.save()
+                print(f"✅ Profesor creado exitosamente: {profesor.nombres} {profesor.apellidos}")
 
-            # Registrar en bitácora
-            registrar_accion_bitacora(
-                request.user,
-                f'CREAR_PROFESOR',
-                request
-            )
+                # Registrar en bitácora
+                registrar_accion_bitacora(
+                    request.user,
+                    f'CREAR_PROFESOR',
+                    request
+                )
 
-            return Response(
-                ProfesorSerializer(profesor).data,
-                status=status.HTTP_201_CREATED
-            )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    ProfesorSerializer(profesor).data,
+                    status=status.HTTP_201_CREATED
+                )
+
+            except Exception as e:
+                print(f"❌ Error al crear profesor: {str(e)}")
+                return Response(
+                    {'error': f'Error al crear: {str(e)}'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+        else:
+            print(f"❌ Errores de validación en creación:")
+            print(json.dumps(serializer.errors, indent=2, ensure_ascii=False))
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
@@ -222,6 +248,15 @@ def profesor_detail(request, pk):
     PATCH: Actualizar profesor parcial
     DELETE: Eliminar profesor
     """
+    if request.method in ['PUT', 'PATCH', 'POST']:
+        print(f"\n{'=' * 50}")
+        print(f"🔍 PAYLOAD RECIBIDO - Método: {request.method}")
+        print(f"📍 Endpoint: {request.path}")
+        print(f"📋 Content-Type: {request.content_type}")
+        print(f"📦 Data recibida:")
+        print(json.dumps(request.data, indent=2, ensure_ascii=False, default=str))
+        print(f"{'=' * 50}\n")
+
     try:
         profesor = Profesor.objects.select_related('usuario').get(pk=pk)
     except Profesor.DoesNotExist:
@@ -234,22 +269,38 @@ def profesor_detail(request, pk):
         serializer = ProfesorSerializer(profesor)
         return Response(serializer.data)
 
+
     elif request.method in ['PUT', 'PATCH']:
         partial = request.method == 'PATCH'
         serializer = ProfesorSerializer(profesor, data=request.data, partial=partial)
 
         if serializer.is_valid():
-            profesor_updated = serializer.save()
+            print(f"✅ Datos validados correctamente")
+            try:
+                profesor_updated = serializer.save()
+                print(f"✅ Profesor actualizado exitosamente")
 
-            # Registrar en bitácora
-            registrar_accion_bitacora(
-                request.user,
-                f'ACTUALIZAR_PROFESOR',
-                request
-            )
+                # Registrar en bitácora
+                registrar_accion_bitacora(
+                    request.user,
+                    f'ACTUALIZAR_PROFESOR: {profesor_updated.nombres} {profesor_updated.apellidos}',
+                    request
+                )
 
-            return Response(ProfesorSerializer(profesor_updated).data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                return Response(ProfesorSerializer(profesor_updated).data)
+
+            except Exception as e:
+                print(f"❌ Error al guardar: {str(e)}")
+                return Response(
+                    {'error': f'Error al guardar: {str(e)}'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+
+                )
+
+        else:
+            print(f"❌ Errores de validación:")
+            print(json.dumps(serializer.errors, indent=2, ensure_ascii=False))
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     elif request.method == 'DELETE':
         nombre_completo = f"{profesor.nombres} {profesor.apellidos}"
@@ -434,4 +485,3 @@ def dashboard_director(request):
         'ultimos_profesores': ProfesorListSerializer(ultimos_profesores, many=True).data,
         'ultimos_alumnos': AlumnoListSerializer(ultimos_alumnos, many=True).data,
     })
-

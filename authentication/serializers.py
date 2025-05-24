@@ -51,15 +51,28 @@ class UsuarioSerializer(serializers.ModelSerializer):
         return user
 
     def update(self, instance, validated_data):
+        # Extraer password si existe
         password = validated_data.pop('password', None)
+
+        # Actualizar campos normales
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 
+        # Actualizar password solo si se proporciona
         if password:
             instance.set_password(password)
 
         instance.save()
         return instance
+
+    def validate_email(self, value):
+        """Validar que el email sea único, excepto para el usuario actual"""
+        if self.instance and self.instance.email == value:
+            return value
+
+        if Usuario.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Este email ya está en uso.")
+        return value
 
 
 class ProfesorSerializer(serializers.ModelSerializer):
@@ -111,9 +124,18 @@ class ProfesorSerializer(serializers.ModelSerializer):
 
         # Actualizar usuario si hay datos
         if usuario_data:
-            usuario_serializer = UsuarioSerializer(instance.usuario, data=usuario_data, partial=True)
+            usuario_serializer = UsuarioSerializer(
+                instance.usuario,
+                data=usuario_data,
+                partial=True
+            )
             if usuario_serializer.is_valid():
                 usuario_serializer.save()
+            else:
+                # IMPORTANTE: Propagar errores del usuario
+                raise serializers.ValidationError({
+                    'usuario': usuario_serializer.errors
+                })
 
         return instance
 
