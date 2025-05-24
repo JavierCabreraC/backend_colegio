@@ -254,4 +254,3 @@ class DirectorSerializer(serializers.ModelSerializer):
 
     def get_nombre_completo(self, obj):
         return f"{obj.nombres} {obj.apellidos}"
-

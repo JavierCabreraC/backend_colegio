@@ -129,12 +129,7 @@ class AulaListSerializer(serializers.ModelSerializer):
         return obj.horario_set.count()
 
 
-# *******************************************************************************************************************
-# *******************************************************************************************************************
-# *******************************************************************************************************************
-
 # Serializers adicionales para referencias
-
 class ProfesorMateriaSerializer(serializers.ModelSerializer):
     """Serializer para asignaciones profesor-materia"""
     profesor_nombre = serializers.CharField(

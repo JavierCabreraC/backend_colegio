@@ -19,6 +19,7 @@ from .serializers import (
     AlumnoSerializer, AlumnoListSerializer
 )
 
+
 logger = logging.getLogger(__name__)
 
 @api_view(['POST'])

@@ -1,6 +1,6 @@
-import academic
 from django.db.models import Q
 from rest_framework import status
+from django.db.models import Count
 from shared.permissions import IsDirector
 from django.core.paginator import Paginator
 from rest_framework.response import Response
@@ -138,7 +138,6 @@ def materia_detail(request, pk):
 
 
 # CRUD DE AULAS
-
 @api_view(['GET', 'POST'])
 @permission_classes([IsDirector])
 def aula_list_create(request):
@@ -269,7 +268,6 @@ def aula_detail(request, pk):
 
 
 # CRUD ADICIONALES (Niveles y Grupos para completitud)
-
 @api_view(['GET', 'POST'])
 @permission_classes([IsDirector])
 def nivel_list_create(request):
@@ -345,7 +343,7 @@ def academic_stats(request):
 
     # Materias por número de profesores
     materias_populares = Materia.objects.annotate(
-        num_profesores=academic.models.Count('profesormateria')
+        num_profesores=Count('profesormateria')
     ).order_by('-num_profesores')[:5]
 
     return Response({

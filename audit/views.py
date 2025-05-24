@@ -28,7 +28,7 @@ def bitacora_list(request):
     usuario_id = request.GET.get('usuario_id', None)
 
     # Filtrar registros
-    # queryset = Bitacora.objects.all().order_by('-fecha_hora')
+    queryset = Bitacora.objects.all().order_by('-fecha_hora')
 
     if tipo_accion:
         queryset = queryset.filter(tipo_accion=tipo_accion)
@@ -94,4 +94,3 @@ def bitacora_stats(request):
         'acciones_ultimos_7_dias': acciones_ultimos_7_dias,
         'usuarios_mas_activos': list(usuarios_activos)
     }, status=status.HTTP_200_OK)
-
