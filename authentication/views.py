@@ -463,9 +463,11 @@ def alumno_detail(request, pk):
 @api_view(['GET'])
 @permission_classes([IsDirector])
 def dashboard_director(request):
-    """Dashboard básico para directores"""
-    from academic.models import Materia, Aula
+    """Dashboard completo para directores"""
+    from academic.models import Materia, Aula, Gestion, Trimestre, Horario, Matriculacion
+    from datetime import date
 
+    # Estadísticas básicas (ya existentes)
     stats = {
         'total_profesores': Profesor.objects.count(),
         'profesores_activos': Profesor.objects.filter(usuario__activo=True).count(),
@@ -477,12 +479,95 @@ def dashboard_director(request):
         'usuarios_activos': Usuario.objects.filter(activo=True).count(),
     }
 
-    # Últimos profesores registrados
+    # ===== NUEVAS ESTADÍSTICAS =====
+
+    # Gestión académica actual
+    gestion_activa = Gestion.objects.filter(activa=True).first()
+    if gestion_activa:
+        stats.update({
+            'gestion_activa': {
+                'id': gestion_activa.id,
+                'anio': gestion_activa.anio,
+                'nombre': gestion_activa.nombre
+            },
+            'total_matriculaciones': Matriculacion.objects.filter(
+                gestion=gestion_activa, activa=True
+            ).count(),
+            'trimestres_gestion': Trimestre.objects.filter(
+                gestion=gestion_activa
+            ).count()
+        })
+
+        # Trimestre actual (basado en fecha)
+        hoy = date.today()
+        trimestre_actual = Trimestre.objects.filter(
+            gestion=gestion_activa,
+            fecha_inicio__lte=hoy,
+            fecha_fin__gte=hoy
+        ).first()
+
+        if trimestre_actual:
+            stats['trimestre_actual'] = {
+                'id': trimestre_actual.id,
+                'numero': trimestre_actual.numero,
+                'nombre': trimestre_actual.nombre
+            }
+
+            # Horarios del trimestre actual
+            stats['horarios_activos'] = Horario.objects.filter(
+                trimestre=trimestre_actual
+            ).count()
+    else:
+        stats.update({
+            'gestion_activa': None,
+            'total_matriculaciones': 0,
+            'trimestres_gestion': 0,
+            'trimestre_actual': None,
+            'horarios_activos': 0
+        })
+
+    # Estadísticas adicionales
+    stats.update({
+        'materias_sin_profesor': Materia.objects.filter(
+            profesormateria__isnull=True
+        ).count(),
+        'profesores_sin_materia': Profesor.objects.filter(
+            profesormateria__isnull=True
+        ).count(),
+        'aulas_sin_horario': Aula.objects.filter(
+            horario__isnull=True
+        ).count() if gestion_activa else Aula.objects.count(),
+        'alumnos_sin_matricular': Alumno.objects.filter(
+            matriculacion__isnull=True
+        ).count() if gestion_activa else Alumno.objects.count()
+    })
+
+    # Datos para gráficos
     ultimos_profesores = Profesor.objects.select_related('usuario').order_by('-created_at')[:5]
     ultimos_alumnos = Alumno.objects.select_related('usuario').order_by('-created_at')[:5]
+
+    # Distribución de alumnos por nivel
+    from django.db.models import Count
+    from authentication.serializers import ProfesorListSerializer, AlumnoListSerializer
+
+    distribucion_niveles = Alumno.objects.values(
+        'grupo__nivel__numero', 'grupo__nivel__nombre'
+    ).annotate(
+        total_alumnos=Count('id')
+    ).order_by('grupo__nivel__numero')
 
     return Response({
         'estadisticas': stats,
         'ultimos_profesores': ProfesorListSerializer(ultimos_profesores, many=True).data,
         'ultimos_alumnos': AlumnoListSerializer(ultimos_alumnos, many=True).data,
+        'distribucion_por_nivel': list(distribucion_niveles),
+        'alertas': [
+            f"{stats['materias_sin_profesor']} materias sin profesor asignado" if stats[
+                                                                                      'materias_sin_profesor'] > 0 else None,
+            f"{stats['profesores_sin_materia']} profesores sin materias asignadas" if stats[
+                                                                                          'profesores_sin_materia'] > 0 else None,
+            f"{stats['alumnos_sin_matricular']} alumnos sin matricular" if stats[
+                                                                               'alumnos_sin_matricular'] > 0 else None,
+            "No hay gestión académica activa" if not gestion_activa else None
+        ]
     })

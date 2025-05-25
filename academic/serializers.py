@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import (
     Nivel, Grupo, Materia, Aula, ProfesorMateria,
-    Gestion, Trimestre
+    Gestion, Trimestre, Matriculacion, Horario
 )
 
 
@@ -190,3 +190,77 @@ class TrimestreSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class MatriculacionSerializer(serializers.ModelSerializer):
+    """Serializer para matriculaciones"""
+    alumno_nombre = serializers.CharField(
+        source='alumno.nombres', read_only=True
+    )
+    alumno_apellidos = serializers.CharField(
+        source='alumno.apellidos', read_only=True
+    )
+    alumno_matricula = serializers.CharField(
+        source='alumno.matricula', read_only=True
+    )
+    gestion_nombre = serializers.CharField(
+        source='gestion.nombre', read_only=True
+    )
+    gestion_anio = serializers.IntegerField(
+        source='gestion.anio', read_only=True
+    )
+
+    class Meta:
+        model = Matriculacion
+        fields = [
+            'id', 'alumno', 'gestion',
+            'alumno_nombre', 'alumno_apellidos', 'alumno_matricula',
+            'gestion_nombre', 'gestion_anio',
+            'fecha_matriculacion', 'activa', 'observaciones',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+class HorarioSerializer(serializers.ModelSerializer):
+    """Serializer para horarios"""
+    profesor_nombre = serializers.CharField(
+        source='profesor_materia.profesor.nombres', read_only=True
+    )
+    profesor_apellidos = serializers.CharField(
+        source='profesor_materia.profesor.apellidos', read_only=True
+    )
+    materia_nombre = serializers.CharField(
+        source='profesor_materia.materia.nombre', read_only=True
+    )
+    materia_codigo = serializers.CharField(
+        source='profesor_materia.materia.codigo', read_only=True
+    )
+    grupo_nombre = serializers.SerializerMethodField()
+    aula_nombre = serializers.CharField(
+        source='aula.nombre', read_only=True
+    )
+    trimestre_nombre = serializers.CharField(
+        source='trimestre.nombre', read_only=True
+    )
+    dia_semana_nombre = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Horario
+        fields = [
+            'id', 'profesor_materia', 'grupo', 'aula', 'trimestre',
+            'profesor_nombre', 'profesor_apellidos',
+            'materia_nombre', 'materia_codigo',
+            'grupo_nombre', 'aula_nombre', 'trimestre_nombre',
+            'dia_semana', 'dia_semana_nombre',
+            'hora_inicio', 'hora_fin',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_grupo_nombre(self, obj):
+        return f"{obj.grupo.nivel.numero}° {obj.grupo.letra}"
+
+    def get_dia_semana_nombre(self, obj):
+        dias = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes'}
+        return dias.get(obj.dia_semana, 'N/A')
+
