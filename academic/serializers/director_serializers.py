@@ -1,8 +1,10 @@
 from rest_framework import serializers
-from .models import (
+from ..models import (
     Nivel, Grupo, Materia, Aula, ProfesorMateria,
     Gestion, Trimestre, Matriculacion, Horario
 )
+
+
 class NivelSerializer(serializers.ModelSerializer):
     """Serializer para niveles académicos"""
     total_grupos = serializers.SerializerMethodField()

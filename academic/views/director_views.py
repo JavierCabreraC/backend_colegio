@@ -2,17 +2,20 @@ from django.db.models import Q
 from django.utils import timezone
 from rest_framework import status
 from django.db.models import Count
-from authentication.models import Alumno
+from rest_framework.permissions import IsAuthenticated
+from authentication.models import Alumno, Profesor
 from shared.permissions import IsDirector
 from django.core.paginator import Paginator
 from rest_framework.response import Response
 from audit.utils import registrar_accion_bitacora
 from rest_framework.decorators import api_view, permission_classes
-from .serializers import (
+from ..serializers import (
     MateriaSerializer, MateriaListSerializer, AulaSerializer, AulaListSerializer, NivelSerializer, GrupoSerializer,
-    GestionSerializer, ProfesorMateriaSerializer, HorarioSerializer, MatriculacionSerializer, TrimestreSerializer
+    GestionSerializer, ProfesorMateriaSerializer, HorarioSerializer, MatriculacionSerializer, TrimestreSerializer,
+    MisHorarios_Serializer, MisMaterias_Serializer, MisGrupos_Serializer, MisAlumnos_Serializer
 )
-from .models import Materia, Aula, Nivel, Grupo, Gestion, ProfesorMateria, Horario, Matriculacion, Trimestre
+from ..models import Materia, Aula, Nivel, Grupo, Gestion, ProfesorMateria, Horario, Matriculacion, Trimestre
+
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsDirector])
@@ -320,30 +323,6 @@ def grupo_list_create(request):
                 status=status.HTTP_201_CREATED
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-# Vista de estadísticas académicas
-@api_view(['GET'])
-@permission_classes([IsDirector])
-def academic_stats(request):
-    """Estadísticas académicas para dashboard"""
-    stats = {
-        'total_materias': Materia.objects.count(),
-        'total_aulas': Aula.objects.count(),
-        'total_niveles': Nivel.objects.count(),
-        'total_grupos': Grupo.objects.count(),
-        'materias_sin_profesor': Materia.objects.filter(profesormateria__isnull=True).count(),
-        'aulas_disponibles': Aula.objects.filter(horario__isnull=True).count(),
-    }
-
-    # Materias por número de profesores
-    materias_populares = Materia.objects.annotate(
-        num_profesores=Count('profesormateria')
-    ).order_by('-num_profesores')[:5]
-
-    return Response({
-        'estadisticas': stats,
-        'materias_mas_profesores': MateriaListSerializer(materias_populares, many=True).data,
-    })
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsDirector])
