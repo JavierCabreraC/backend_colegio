@@ -1,7 +1,6 @@
 from django.db import models
 from shared.models import BaseEntity
 
-
 class Examen(BaseEntity):
     profesor_materia = models.ForeignKey('academic.ProfesorMateria', on_delete=models.CASCADE)
     trimestre = models.ForeignKey('academic.Trimestre', on_delete=models.CASCADE)
@@ -24,7 +23,6 @@ class Examen(BaseEntity):
             )
         ]
 
-
 class NotaExamen(BaseEntity):
     matriculacion = models.ForeignKey('academic.Matriculacion', on_delete=models.CASCADE)
     examen = models.ForeignKey(Examen, on_delete=models.CASCADE)
@@ -41,7 +39,6 @@ class NotaExamen(BaseEntity):
                 name='check_nota_examen_rango'
             )
         ]
-
 
 class Tarea(BaseEntity):
     profesor_materia = models.ForeignKey('academic.ProfesorMateria', on_delete=models.CASCADE)
@@ -65,7 +62,6 @@ class Tarea(BaseEntity):
             )
         ]
 
-
 class NotaTarea(BaseEntity):
     matriculacion = models.ForeignKey('academic.Matriculacion', on_delete=models.CASCADE)
     tarea = models.ForeignKey(Tarea, on_delete=models.CASCADE)
@@ -83,13 +79,11 @@ class NotaTarea(BaseEntity):
             )
         ]
 
-
 class EstadoAsistencia(models.TextChoices):
     PRESENTE = 'P', 'Presente'
     FALTA = 'F', 'Falta'
     TARDANZA = 'T', 'Tardanza'
     JUSTIFICADA = 'J', 'Justificada'
-
 
 class Asistencia(BaseEntity):
     matriculacion = models.ForeignKey('academic.Matriculacion', on_delete=models.CASCADE)
@@ -103,7 +97,6 @@ class Asistencia(BaseEntity):
     class Meta:
         db_table = 'asistencias'
         unique_together = ['matriculacion', 'horario', 'fecha']
-
 
 class Participacion(BaseEntity):
     matriculacion = models.ForeignKey('academic.Matriculacion', on_delete=models.CASCADE)
@@ -121,12 +114,10 @@ class Participacion(BaseEntity):
             )
         ]
 
-
 class EstadoMateria(models.TextChoices):
     APROBADO = 'aprobado', 'Aprobado'
     REPROBADO = 'reprobado', 'Reprobado'
     EN_RECUPERACION = 'en_recuperacion', 'En Recuperación'
-
 
 class HistoricoTrimestral(BaseEntity):
     alumno = models.ForeignKey('authentication.Alumno', on_delete=models.CASCADE)
@@ -143,7 +134,6 @@ class HistoricoTrimestral(BaseEntity):
     class Meta:
         db_table = 'historico_trimestral'
         unique_together = ['alumno', 'trimestre', 'materia']
-
 
 class HistoricoAnual(BaseEntity):
     alumno = models.ForeignKey('authentication.Alumno', on_delete=models.CASCADE)

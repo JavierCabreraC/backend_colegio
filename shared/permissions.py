@@ -1,6 +1,5 @@
 from rest_framework.permissions import BasePermission
 
-
 class IsDirector(BasePermission):
     """
     Permiso personalizado para permitir acceso solo a directores
@@ -11,7 +10,6 @@ class IsDirector(BasePermission):
             hasattr(request.user, 'tipo_usuario') and
             request.user.tipo_usuario == 'director'
         )
-
 
 class IsProfesor(BasePermission):
     """
@@ -24,7 +22,6 @@ class IsProfesor(BasePermission):
             request.user.tipo_usuario == 'profesor'
         )
 
-
 class IsAlumno(BasePermission):
     """
     Permiso personalizado para permitir acceso solo a alumnos
@@ -35,7 +32,6 @@ class IsAlumno(BasePermission):
             hasattr(request.user, 'tipo_usuario') and
             request.user.tipo_usuario == 'alumno'
         )
-
 
 class IsDirectorOrProfesor(BasePermission):
     """

@@ -3,14 +3,12 @@ from django.contrib.auth import authenticate
 from .models import Usuario, Director, Profesor, Alumno
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         data = super().validate(attrs)
         data['rol'] = self.user.tipo_usuario
         data['id'] = self.user.id
         return data
-
 
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -31,7 +29,6 @@ class LoginSerializer(serializers.Serializer):
             return attrs
         else:
             raise serializers.ValidationError('Email y contraseña son requeridos')
-
 
 class UsuarioSerializer(serializers.ModelSerializer):
     """Serializer base para usuarios"""
@@ -73,7 +70,6 @@ class UsuarioSerializer(serializers.ModelSerializer):
         if Usuario.objects.filter(email=value).exists():
             raise serializers.ValidationError("Este email ya está en uso.")
         return value
-
 
 class ProfesorSerializer(serializers.ModelSerializer):
     """Serializer para CRUD de profesores"""
@@ -156,7 +152,6 @@ class ProfesorListSerializer(serializers.ModelSerializer):
     def get_nombre_completo(self, obj):
         return f"{obj.nombres} {obj.apellidos}"
 
-
 class AlumnoSerializer(serializers.ModelSerializer):
     """Serializer para CRUD de alumnos"""
     usuario = UsuarioSerializer()
@@ -214,7 +209,6 @@ class AlumnoSerializer(serializers.ModelSerializer):
 
         return instance
 
-
 class AlumnoListSerializer(serializers.ModelSerializer):
     """Serializer simplificado para listado de alumnos"""
     email = serializers.CharField(source='usuario.email', read_only=True)
@@ -236,7 +230,6 @@ class AlumnoListSerializer(serializers.ModelSerializer):
         if obj.grupo:
             return f"{obj.grupo.nivel.numero}° {obj.grupo.letra}"
         return None
-
 
 class DirectorSerializer(serializers.ModelSerializer):
     """Serializer para directores (para completitud)"""

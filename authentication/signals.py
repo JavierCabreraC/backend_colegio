@@ -3,7 +3,6 @@ from audit.models import Bitacora
 from django.dispatch import receiver
 from django.db.models.signals import post_save
 
-
 @receiver(post_save, sender=Bitacora)
 def update_last_login_on_login_action(sender, instance, created, **kwargs):
     """

@@ -1,7 +1,6 @@
 from django.db import models
 from shared.models import BaseEntity
 
-
 class PrediccionRendimiento(BaseEntity):
     alumno = models.ForeignKey('authentication.Alumno', on_delete=models.CASCADE)
     gestion = models.ForeignKey('academic.Gestion', on_delete=models.CASCADE)

@@ -14,7 +14,6 @@ from .serializers import (
 )
 from .models import Materia, Aula, Nivel, Grupo, Gestion, ProfesorMateria, Horario, Matriculacion, Trimestre
 
-
 @api_view(['GET', 'POST'])
 @permission_classes([IsDirector])
 def materia_list_create(request):
@@ -71,7 +70,6 @@ def materia_list_create(request):
                 status=status.HTTP_201_CREATED
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 @api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
 @permission_classes([IsDirector])
@@ -136,7 +134,6 @@ def materia_detail(request, pk):
             {'message': 'Materia eliminada exitosamente'},
             status=status.HTTP_204_NO_CONTENT
         )
-
 
 # CRUD DE AULAS
 @api_view(['GET', 'POST'])
@@ -203,7 +200,6 @@ def aula_list_create(request):
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 @api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
 @permission_classes([IsDirector])
 def aula_detail(request, pk):
@@ -267,7 +263,6 @@ def aula_detail(request, pk):
             status=status.HTTP_204_NO_CONTENT
         )
 
-
 # CRUD ADICIONALES (Niveles y Grupos para completitud)
 @api_view(['GET', 'POST'])
 @permission_classes([IsDirector])
@@ -294,7 +289,6 @@ def nivel_list_create(request):
                 status=status.HTTP_201_CREATED
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsDirector])
@@ -327,7 +321,6 @@ def grupo_list_create(request):
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 # Vista de estadísticas académicas
 @api_view(['GET'])
 @permission_classes([IsDirector])
@@ -351,7 +344,6 @@ def academic_stats(request):
         'estadisticas': stats,
         'materias_mas_profesores': MateriaListSerializer(materias_populares, many=True).data,
     })
-
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsDirector])
@@ -404,7 +396,6 @@ def gestion_list_create(request):
                 status=status.HTTP_201_CREATED
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 @api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
 @permission_classes([IsDirector])
@@ -469,7 +460,6 @@ def gestion_detail(request, pk):
             status=status.HTTP_204_NO_CONTENT
         )
 
-
 @api_view(['POST'])
 @permission_classes([IsDirector])
 def activar_gestion(request, pk):
@@ -499,7 +489,6 @@ def activar_gestion(request, pk):
         'message': f'Gestión {gestion.anio} activada exitosamente',
         'gestion': GestionSerializer(gestion).data
     })
-
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsDirector])
@@ -553,7 +542,6 @@ def profesor_materia_list_create(request):
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 @api_view(['DELETE'])
 @permission_classes([IsDirector])
 def profesor_materia_delete(request, pk):
@@ -591,7 +579,6 @@ def profesor_materia_delete(request, pk):
         status=status.HTTP_204_NO_CONTENT
     )
 
-
 @api_view(['GET', 'POST'])
 @permission_classes([IsDirector])
 def trimestre_list_create(request):
@@ -626,7 +613,6 @@ def trimestre_list_create(request):
                 status=status.HTTP_201_CREATED
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 @api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
 @permission_classes([IsDirector])
@@ -683,7 +669,6 @@ def trimestre_detail(request, pk):
             {'message': 'Trimestre eliminado exitosamente'},
             status=status.HTTP_204_NO_CONTENT
         )
-
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsDirector])
@@ -747,7 +732,6 @@ def matriculacion_list_create(request):
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 @api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
 @permission_classes([IsDirector])
 def matriculacion_detail(request, pk):
@@ -798,7 +782,6 @@ def matriculacion_detail(request, pk):
             {'message': 'Matriculación eliminada exitosamente'},
             status=status.HTTP_204_NO_CONTENT
         )
-
 
 @api_view(['POST'])
 @permission_classes([IsDirector])
@@ -855,7 +838,6 @@ def matricular_masivo(request):
         'errores': errores,
         'matriculaciones': MatriculacionSerializer(matriculaciones_creadas, many=True).data
     })
-
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsDirector])
@@ -926,7 +908,6 @@ def horario_list_create(request):
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 @api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
 @permission_classes([IsDirector])
 def horario_detail(request, pk):
@@ -987,7 +968,6 @@ def horario_detail(request, pk):
             status=status.HTTP_204_NO_CONTENT
         )
 
-
 def validar_conflictos_horario(data, excluir_id=None):
     """Función auxiliar para validar conflictos de horario"""
     conflictos = []
@@ -1038,7 +1018,6 @@ def validar_conflictos_horario(data, excluir_id=None):
         conflictos.append('El grupo ya tiene clases en este horario')
 
     return conflictos
-
 
 @api_view(['GET'])
 @permission_classes([IsDirector])

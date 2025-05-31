@@ -1,7 +1,6 @@
 from . import views
 from django.urls import path
 
-
 urlpatterns = [
     # CRUD de Materias
     path('materias/', views.materia_list_create, name='materia-list-create'),

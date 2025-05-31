@@ -2,13 +2,11 @@ from django.db import models
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 
-
 # Enum para tipos de usuario
 class TipoUsuario(models.TextChoices):
     DIRECTOR = 'director', 'Director'
     PROFESOR = 'profesor', 'Profesor' 
     ALUMNO = 'alumno', 'Alumno'
-
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password, **extra_fields):
@@ -25,7 +23,6 @@ class CustomUserManager(BaseUserManager):
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('tipo_usuario', TipoUsuario.DIRECTOR)
         return self.create_user(email, password, **extra_fields)
-
 
 class Usuario(AbstractBaseUser, PermissionsMixin):
     id = models.AutoField(primary_key=True)
@@ -50,7 +47,6 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     class Meta:
         db_table = 'usuarios'
 
-
 class Director(models.Model):
     usuario = models.OneToOneField(
         Usuario,
@@ -69,7 +65,6 @@ class Director(models.Model):
     
     class Meta:
         db_table = 'directores'
-
 
 class Profesor(models.Model):
     usuario = models.OneToOneField(
@@ -91,7 +86,6 @@ class Profesor(models.Model):
     
     class Meta:
         db_table = 'profesores'
-
 
 class Alumno(models.Model):
     usuario = models.OneToOneField(

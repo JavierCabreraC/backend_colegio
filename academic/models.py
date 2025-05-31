@@ -1,7 +1,6 @@
 from django.db import models
 from shared.models import BaseEntity
 
-
 class Nivel(BaseEntity):
     numero = models.IntegerField(unique=True)
     nombre = models.CharField(max_length=50)
@@ -15,7 +14,6 @@ class Nivel(BaseEntity):
                 name='check_nivel_numero'
             )
         ]
-
 
 class Grupo(BaseEntity):
     nivel = models.ForeignKey(Nivel, on_delete=models.CASCADE)
@@ -32,7 +30,6 @@ class Grupo(BaseEntity):
             )
         ]
 
-
 class Aula(BaseEntity):
     nombre = models.CharField(max_length=20, unique=True)
     capacidad = models.IntegerField()
@@ -40,7 +37,6 @@ class Aula(BaseEntity):
     
     class Meta:
         db_table = 'aulas'
-
 
 class Materia(BaseEntity):
     codigo = models.CharField(max_length=10, unique=True)
@@ -51,7 +47,6 @@ class Materia(BaseEntity):
     class Meta:
         db_table = 'materias'
 
-
 class ProfesorMateria(BaseEntity):
     profesor = models.ForeignKey('authentication.Profesor', on_delete=models.CASCADE)
     materia = models.ForeignKey(Materia, on_delete=models.CASCADE)
@@ -59,7 +54,6 @@ class ProfesorMateria(BaseEntity):
     class Meta:
         db_table = 'profesor_materia'
         unique_together = ['profesor', 'materia']
-
 
 class Gestion(BaseEntity):
     anio = models.IntegerField(unique=True)
@@ -70,7 +64,6 @@ class Gestion(BaseEntity):
     
     class Meta:
         db_table = 'gestiones'
-
 
 class Trimestre(BaseEntity):
     gestion = models.ForeignKey(Gestion, on_delete=models.CASCADE)
@@ -88,7 +81,6 @@ class Trimestre(BaseEntity):
                 name='check_trimestre_numero'
             )
         ]
-
 
 class Horario(BaseEntity):
     profesor_materia = models.ForeignKey(ProfesorMateria, on_delete=models.CASCADE)
@@ -115,7 +107,6 @@ class Horario(BaseEntity):
                 name='check_hora_fin'
             )
         ]
-
 
 class Matriculacion(BaseEntity):
     alumno = models.ForeignKey('authentication.Alumno', on_delete=models.CASCADE)

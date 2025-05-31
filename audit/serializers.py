@@ -1,7 +1,6 @@
 from .models import Bitacora
 from rest_framework import serializers
 
-
 class BitacoraSerializer(serializers.ModelSerializer):
     usuario_email = serializers.CharField(source='usuario.email', read_only=True)
     usuario_nombre = serializers.SerializerMethodField()

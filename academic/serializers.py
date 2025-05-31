@@ -3,8 +3,6 @@ from .models import (
     Nivel, Grupo, Materia, Aula, ProfesorMateria,
     Gestion, Trimestre, Matriculacion, Horario
 )
-
-
 class NivelSerializer(serializers.ModelSerializer):
     """Serializer para niveles académicos"""
     total_grupos = serializers.SerializerMethodField()
@@ -25,7 +23,6 @@ class NivelSerializer(serializers.ModelSerializer):
     def get_total_alumnos(self, obj):
         from authentication.models import Alumno
         return Alumno.objects.filter(grupo__nivel=obj).count()
-
 
 class GrupoSerializer(serializers.ModelSerializer):
     """Serializer para grupos"""
@@ -48,7 +45,6 @@ class GrupoSerializer(serializers.ModelSerializer):
 
     def get_nombre_completo(self, obj):
         return f"{obj.nivel.numero}° {obj.letra}"
-
 
 class MateriaSerializer(serializers.ModelSerializer):
     """Serializer para materias"""
@@ -77,7 +73,6 @@ class MateriaSerializer(serializers.ModelSerializer):
             })
         return profesores
 
-
 class MateriaListSerializer(serializers.ModelSerializer):
     """Serializer simplificado para listado de materias"""
     total_profesores = serializers.SerializerMethodField()
@@ -90,7 +85,6 @@ class MateriaListSerializer(serializers.ModelSerializer):
 
     def get_total_profesores(self, obj):
         return obj.profesormateria_set.count()
-
 
 class AulaSerializer(serializers.ModelSerializer):
     """Serializer para aulas"""
@@ -116,7 +110,6 @@ class AulaSerializer(serializers.ModelSerializer):
     def get_horarios_count(self, obj):
         return obj.horario_set.count()
 
-
 class AulaListSerializer(serializers.ModelSerializer):
     """Serializer simplificado para listado de aulas"""
     horarios_count = serializers.SerializerMethodField()
@@ -127,7 +120,6 @@ class AulaListSerializer(serializers.ModelSerializer):
 
     def get_horarios_count(self, obj):
         return obj.horario_set.count()
-
 
 # Serializers adicionales para referencias
 class ProfesorMateriaSerializer(serializers.ModelSerializer):
@@ -155,7 +147,6 @@ class ProfesorMateriaSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
-
 class GestionSerializer(serializers.ModelSerializer):
     """Serializer para gestiones académicas"""
     total_trimestres = serializers.SerializerMethodField()
@@ -176,7 +167,6 @@ class GestionSerializer(serializers.ModelSerializer):
     def get_total_matriculaciones(self, obj):
         return obj.matriculacion_set.count()
 
-
 class TrimestreSerializer(serializers.ModelSerializer):
     """Serializer para trimestres"""
     gestion_nombre = serializers.CharField(source='gestion.nombre', read_only=True)
@@ -190,7 +180,6 @@ class TrimestreSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
-
 
 class MatriculacionSerializer(serializers.ModelSerializer):
     """Serializer para matriculaciones"""
@@ -263,4 +252,3 @@ class HorarioSerializer(serializers.ModelSerializer):
     def get_dia_semana_nombre(self, obj):
         dias = {1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes'}
         return dias.get(obj.dia_semana, 'N/A')
-
