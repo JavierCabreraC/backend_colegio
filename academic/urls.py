@@ -39,4 +39,12 @@ urlpatterns = [
 
     # Estadísticas
     path('stats/', views.academic_stats, name='academic-stats'),
+
+    # Endpoints para profesores
+    path('mis-materias/', views.mis_materias, name='mis-materias'),
+    path('mis-grupos/', views.mis_grupos, name='mis-grupos'),
+    path('mis-alumnos/', views.mis_alumnos, name='mis-alumnos'),
+    path('mis-horarios/', views.mis_horarios, name='mis-horarios'),
+    path('mi-horario/hoy/', views.mi_horario_hoy, name='mi-horario-hoy'),
+    path('mi-horario/semana/', views.mi_horario_semana, name='mi-horario-semana'),
 ]
