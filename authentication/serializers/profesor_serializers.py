@@ -1,4 +1,6 @@
+from datetime import date
 from rest_framework import serializers
+from academic.models import ( Trimestre, Gestion,  ProfesorMateria, Horario )
 
 
 class DashboardProfesorSerializer(serializers.Serializer):
@@ -23,7 +25,6 @@ class DashboardProfesorSerializer(serializers.Serializer):
 
     def get_materias_asignadas(self, obj):
         """Materias que imparte el profesor"""
-        from academic.models import ProfesorMateria
         materias = ProfesorMateria.objects.filter(
             profesor=obj
         ).select_related('materia')
@@ -40,7 +41,6 @@ class DashboardProfesorSerializer(serializers.Serializer):
 
     def get_grupos_asignados(self, obj):
         """Grupos que atiende el profesor"""
-        from academic.models import Horario
         grupos = Horario.objects.filter(
             profesor_materia__profesor=obj
         ).values(
@@ -57,9 +57,6 @@ class DashboardProfesorSerializer(serializers.Serializer):
 
     def get_horarios_hoy(self, obj):
         """Clases de hoy del profesor"""
-        from datetime import date
-        from academic.models import Horario
-
         hoy = date.today()
         dia_semana = hoy.weekday() + 1  # Django usa 1=Lunes
 
@@ -89,9 +86,6 @@ class DashboardProfesorSerializer(serializers.Serializer):
 
     def get_estadisticas(self, obj):
         """Estadísticas básicas del profesor"""
-        from academic.models import ProfesorMateria, Horario
-        from authentication.models import Alumno
-
         total_materias = ProfesorMateria.objects.filter(profesor=obj).count()
         total_horarios = Horario.objects.filter(profesor_materia__profesor=obj).count()
 
@@ -110,7 +104,6 @@ class DashboardProfesorSerializer(serializers.Serializer):
 
     def get_gestion_activa(self, obj):
         """Gestión académica activa"""
-        from academic.models import Gestion
         gestion = Gestion.objects.filter(activa=True).first()
         if gestion:
             return {
@@ -122,9 +115,6 @@ class DashboardProfesorSerializer(serializers.Serializer):
 
     def get_trimestre_actual(self, obj):
         """Trimestre actual basado en fechas"""
-        from datetime import date
-        from academic.models import Trimestre, Gestion
-
         gestion = Gestion.objects.filter(activa=True).first()
         if not gestion:
             return None

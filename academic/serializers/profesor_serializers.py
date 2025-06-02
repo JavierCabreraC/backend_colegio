@@ -1,9 +1,7 @@
+from datetime import date
 from rest_framework import serializers
 from authentication.models import Alumno
-from ..models import (
-    Nivel, Grupo, Materia, Aula, ProfesorMateria,
-    Gestion, Trimestre, Matriculacion, Horario
-)
+from ..models import ( Grupo, ProfesorMateria, Horario )
 
 
 class MisMaterias_Serializer(serializers.ModelSerializer):
@@ -30,7 +28,6 @@ class MisMaterias_Serializer(serializers.ModelSerializer):
 
     def get_total_alumnos(self, obj):
         """Contar alumnos que toma esta materia con este profesor"""
-        from authentication.models import Alumno
         grupos_ids = Horario.objects.filter(
             profesor_materia=obj
         ).values_list('grupo_id', flat=True).distinct()
@@ -78,7 +75,6 @@ class MisGrupos_Serializer(serializers.ModelSerializer):
             }
             for h in horarios
         ]
-
 
 class MisHorarios_Serializer(serializers.ModelSerializer):
     """Serializer para horarios del profesor"""
@@ -128,7 +124,6 @@ class MisAlumnos_Serializer(serializers.ModelSerializer):
         return f"{obj.grupo.nivel.numero}° {obj.grupo.letra}"
 
     def get_edad(self, obj):
-        from datetime import date
         if obj.fecha_nacimiento:
             today = date.today()
             return today.year - obj.fecha_nacimiento.year - (

@@ -1,20 +1,17 @@
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework import status
-from django.db.models import Count
-from rest_framework.permissions import IsAuthenticated
-from authentication.models import Alumno, Profesor
+from authentication.models import Alumno
 from shared.permissions import IsDirector
 from django.core.paginator import Paginator
 from rest_framework.response import Response
 from audit.utils import registrar_accion_bitacora
 from rest_framework.decorators import api_view, permission_classes
+from ..models import Materia, Aula, Nivel, Grupo, Gestion, ProfesorMateria, Horario, Matriculacion, Trimestre
 from ..serializers import (
     MateriaSerializer, MateriaListSerializer, AulaSerializer, AulaListSerializer, NivelSerializer, GrupoSerializer,
-    GestionSerializer, ProfesorMateriaSerializer, HorarioSerializer, MatriculacionSerializer, TrimestreSerializer,
-    MisHorarios_Serializer, MisMaterias_Serializer, MisGrupos_Serializer, MisAlumnos_Serializer
+    GestionSerializer, ProfesorMateriaSerializer, HorarioSerializer, MatriculacionSerializer, TrimestreSerializer
 )
-from ..models import Materia, Aula, Nivel, Grupo, Gestion, ProfesorMateria, Horario, Matriculacion, Trimestre
 
 
 @api_view(['GET', 'POST'])

@@ -1,13 +1,14 @@
 from rest_framework import status
-from authentication.models import Profesor
-from django.db.models import Q, Avg, Count
+from datetime import date, datetime
 from django.core.paginator import Paginator
 from rest_framework.response import Response
+from django.db.models import Avg, Count, Q as DQ
 from audit.utils import registrar_accion_bitacora
+from authentication.models import Alumno, Profesor
 from rest_framework.permissions import IsAuthenticated
-from academic.models import ProfesorMateria, Trimestre, Gestion
 from rest_framework.decorators import api_view, permission_classes
 from ..models import Examen, Tarea, NotaExamen, NotaTarea, Asistencia, Participacion
+from academic.models import Horario, Matriculacion, Grupo, Materia, ProfesorMateria, Trimestre, Gestion
 from ..serializers import (
     # Evaluaciones básicas
     MisExamenes_Serializer, ExamenCreateUpdateSerializer,
@@ -81,9 +82,9 @@ def mis_examenes(request):
         # Aplicar filtros
         if search:
             queryset = queryset.filter(
-                Q(titulo__icontains=search) |
-                Q(descripcion__icontains=search) |
-                Q(profesor_materia__materia__nombre__icontains=search)
+                DQ(titulo__icontains=search) |
+                DQ(descripcion__icontains=search) |
+                DQ(profesor_materia__materia__nombre__icontains=search)
             )
 
         if trimestre_id:
@@ -137,7 +138,6 @@ def mis_examenes(request):
             )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 @api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated])
@@ -224,9 +224,9 @@ def mis_tareas(request):
         # Aplicar filtros
         if search:
             queryset = queryset.filter(
-                Q(titulo__icontains=search) |
-                Q(descripcion__icontains=search) |
-                Q(profesor_materia__materia__nombre__icontains=search)
+                DQ(titulo__icontains=search) |
+                DQ(descripcion__icontains=search) |
+                DQ(profesor_materia__materia__nombre__icontains=search)
             )
 
         if trimestre_id:
@@ -236,7 +236,6 @@ def mis_tareas(request):
             queryset = queryset.filter(profesor_materia__materia_id=materia_id)
 
         if estado:
-            from datetime import date
             hoy = date.today()
             if estado == 'vencida':
                 queryset = queryset.filter(fecha_entrega__lt=hoy)
@@ -285,7 +284,6 @@ def mis_tareas(request):
             )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 @api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated])
@@ -337,7 +335,6 @@ def tarea_detail(request, pk):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 # ==========================================
 # ENDPOINTS AUXILIARES
 # ==========================================
@@ -356,7 +353,6 @@ def opciones_profesor_materias(request):
 
     serializer = ProfesorMateriaSimpleSerializer(profesor_materias, many=True)
     return Response(serializer.data)
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -377,7 +373,6 @@ def opciones_trimestres(request):
 
     serializer = TrimestreSimpleSerializer(trimestres, many=True)
     return Response(serializer.data)
-
 
 # ==========================================
 # CALIFICACIÓN DE EXÁMENES
@@ -406,7 +401,6 @@ def examen_alumnos(request, examen_id):
         )
 
     # Obtener grupos donde se imparte este examen
-    from academic.models import Horario, Matriculacion
     grupos_ids = Horario.objects.filter(
         profesor_materia=examen.profesor_materia,
         trimestre=examen.trimestre
@@ -469,7 +463,6 @@ def examen_alumnos(request, examen_id):
         'alumnos': serializer.data
     })
 
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def calificar_examen(request):
@@ -518,7 +511,6 @@ def calificar_examen(request):
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
 def nota_examen_detail(request, pk):
@@ -564,7 +556,6 @@ def nota_examen_detail(request, pk):
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def calificar_masivo(request):
@@ -596,7 +587,6 @@ def calificar_masivo(request):
 
         for calificacion_data in calificaciones:
             try:
-                from academic.models import Matriculacion
                 matriculacion = Matriculacion.objects.get(
                     id=calificacion_data['matriculacion_id']
                 )
@@ -638,7 +628,6 @@ def calificar_masivo(request):
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 # ==========================================
 # CALIFICACIÓN DE TAREAS
 # ==========================================
@@ -666,7 +655,6 @@ def tarea_entregas(request, tarea_id):
         )
 
     # Obtener grupos donde se imparte esta tarea
-    from academic.models import Horario, Matriculacion
     grupos_ids = Horario.objects.filter(
         profesor_materia=tarea.profesor_materia,
         trimestre=tarea.trimestre
@@ -729,7 +717,6 @@ def tarea_entregas(request, tarea_id):
         'alumnos': serializer.data
     })
 
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def calificar_tarea(request):
@@ -778,7 +765,6 @@ def calificar_tarea(request):
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
 def nota_tarea_detail(request, pk):
@@ -824,7 +810,6 @@ def nota_tarea_detail(request, pk):
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def tareas_pendientes(request):
@@ -832,8 +817,6 @@ def tareas_pendientes(request):
     profesor, error_response = validar_profesor_autenticado(request)
     if error_response:
         return error_response
-
-    from datetime import date
 
     # Obtener tareas del profesor que tienen entregas pendientes
     tareas = Tarea.objects.filter(
@@ -847,7 +830,6 @@ def tareas_pendientes(request):
     tareas_con_pendientes = []
     for tarea in tareas:
         # Calcular total de entregas esperadas
-        from academic.models import Horario, Matriculacion
         grupos_ids = Horario.objects.filter(
             profesor_materia=tarea.profesor_materia,
             trimestre=tarea.trimestre
@@ -871,7 +853,6 @@ def tareas_pendientes(request):
         'tareas': serializer.data
     })
 
-
 # ==========================================
 # GESTIÓN DE ASISTENCIAS
 # ==========================================
@@ -891,9 +872,6 @@ def mis_asistencias(request):
     fecha_hasta = request.GET.get('fecha_hasta', '')
     materia_id = request.GET.get('materia', '')
     grupo_id = request.GET.get('grupo', '')
-
-    from django.db.models import Count, Q as DQ
-    from datetime import date, timedelta
 
     # Obtener fechas donde se tomó asistencia
     queryset = Asistencia.objects.filter(
@@ -923,7 +901,6 @@ def mis_asistencias(request):
     horarios_con_stats = []
     for item in queryset:
         try:
-            from academic.models import Horario
             horario = Horario.objects.select_related(
                 'profesor_materia__materia',
                 'grupo', 'grupo__nivel'
@@ -962,7 +939,6 @@ def mis_asistencias(request):
         'results': serializer.data
     })
 
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def tomar_asistencia(request):
@@ -981,7 +957,6 @@ def tomar_asistencia(request):
         fecha = serializer.validated_data['fecha']
         asistencias_data = serializer.validated_data['asistencias']
 
-        from academic.models import Horario
         horario = Horario.objects.get(id=horario_id)
 
         # Procesar asistencias
@@ -990,7 +965,6 @@ def tomar_asistencia(request):
 
         for asistencia_data in asistencias_data:
             try:
-                from academic.models import Matriculacion
                 matriculacion = Matriculacion.objects.get(
                     id=asistencia_data['matriculacion_id']
                 )
@@ -1047,7 +1021,6 @@ def tomar_asistencia(request):
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def asistencia_clase(request, horario_id):
@@ -1058,10 +1031,8 @@ def asistencia_clase(request, horario_id):
 
     fecha = request.GET.get('fecha')
     if not fecha:
-        from datetime import date
         fecha = date.today()
     else:
-        from datetime import datetime
         try:
             fecha = datetime.strptime(fecha, '%Y-%m-%d').date()
         except ValueError:
@@ -1071,7 +1042,6 @@ def asistencia_clase(request, horario_id):
             )
 
     try:
-        from academic.models import Horario
         horario = Horario.objects.select_related(
             'profesor_materia__materia',
             'grupo', 'grupo__nivel'
@@ -1106,7 +1076,6 @@ def asistencia_clase(request, horario_id):
         'total_registros': len(asistencias),
         'asistencias': serializer.data
     })
-
 
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
@@ -1153,7 +1122,6 @@ def asistencia_detail(request, pk):
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def lista_clase(request):
@@ -1172,10 +1140,8 @@ def lista_clase(request):
         )
 
     if not fecha:
-        from datetime import date
         fecha = date.today()
     else:
-        from datetime import datetime
         try:
             fecha = datetime.strptime(fecha, '%Y-%m-%d').date()
         except ValueError:
@@ -1185,7 +1151,6 @@ def lista_clase(request):
             )
 
     try:
-        from academic.models import Horario
         horario = Horario.objects.select_related(
             'profesor_materia__materia',
             'grupo', 'grupo__nivel'
@@ -1200,7 +1165,6 @@ def lista_clase(request):
         )
 
     # Obtener alumnos matriculados en el grupo
-    from academic.models import Matriculacion
     matriculaciones = Matriculacion.objects.filter(
         alumno__grupo=horario.grupo,
         gestion=horario.trimestre.gestion,
@@ -1256,7 +1220,6 @@ def lista_clase(request):
         'ya_registrados': len([a for a in alumnos_data if a['asistencia_actual']]),
         'alumnos': serializer.data
     })
-
 
 # ==========================================
 # GESTIÓN DE PARTICIPACIONES
@@ -1321,7 +1284,6 @@ def mis_participaciones(request):
         'results': serializer.data
     })
 
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def registrar_participacion(request):
@@ -1363,7 +1325,6 @@ def registrar_participacion(request):
         )
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
@@ -1410,7 +1371,6 @@ def participacion_detail(request, pk):
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def participaciones_clase(request):
@@ -1429,10 +1389,8 @@ def participaciones_clase(request):
         )
 
     if not fecha:
-        from datetime import date
         fecha = date.today()
     else:
-        from datetime import datetime
         try:
             fecha = datetime.strptime(fecha, '%Y-%m-%d').date()
         except ValueError:
@@ -1442,7 +1400,6 @@ def participaciones_clase(request):
             )
 
     try:
-        from academic.models import Horario
         horario = Horario.objects.select_related(
             'profesor_materia__materia',
             'grupo', 'grupo__nivel'
@@ -1475,7 +1432,6 @@ def participaciones_clase(request):
 
     return Response(response_data)
 
-
 # ==========================================
 # REPORTES Y ANÁLISIS
 # ==========================================
@@ -1487,8 +1443,6 @@ def estadisticas_mis_clases(request):
     profesor, error_response = validar_profesor_autenticado(request)
     if error_response:
         return error_response
-
-    #from django.db.models import Avg, Count
 
     # Obtener trimestre actual o parámetro
     trimestre_id = request.GET.get('trimestre')
@@ -1506,7 +1460,6 @@ def estadisticas_mis_clases(request):
         if not gestion_activa:
             return Response({'error': 'No hay gestión activa'}, status=400)
 
-        from datetime import date
         hoy = date.today()
         trimestre = Trimestre.objects.filter(
             gestion=gestion_activa,
@@ -1554,7 +1507,6 @@ def estadisticas_mis_clases(request):
     ).aggregate(promedio=Avg('nota'))['promedio']
 
     # Promedio de asistencia
-    from django.db.models import Q as DQ, Case, When, IntegerField
     asistencias_stats = Asistencia.objects.filter(
         horario__profesor_materia__profesor=profesor,
         horario__trimestre=trimestre
@@ -1612,7 +1564,6 @@ def reporte_grupo(request, grupo_id):
         return error_response
 
     try:
-        from academic.models import Grupo
         grupo = Grupo.objects.select_related('nivel').get(pk=grupo_id)
     except Grupo.DoesNotExist:
         return Response(
@@ -1621,7 +1572,6 @@ def reporte_grupo(request, grupo_id):
         )
 
     # Verificar que el profesor enseña a este grupo
-    from academic.models import Horario
     horarios_profesor = Horario.objects.filter(
         profesor_materia__profesor=profesor,
         grupo=grupo
@@ -1643,7 +1593,6 @@ def reporte_grupo(request, grupo_id):
     }
 
     # Obtener alumnos del grupo
-    from academic.models import Matriculacion
     gestion_activa = Gestion.objects.filter(activa=True).first()
 
     matriculaciones = Matriculacion.objects.filter(
@@ -1719,7 +1668,6 @@ def reporte_grupo(request, grupo_id):
         alumnos_rendimiento.append(alumno_data)
 
     # Estadísticas generales del grupo
-    #from django.db.models import Avg
     estadisticas_generales = {
         'total_alumnos': len(alumnos_rendimiento),
         'promedio_grupo_examenes': NotaExamen.objects.filter(
@@ -1749,7 +1697,6 @@ def reporte_grupo(request, grupo_id):
 
     return Response(serializer.data)
 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def reporte_alumno(request, alumno_id):
@@ -1759,7 +1706,6 @@ def reporte_alumno(request, alumno_id):
         return error_response
 
     try:
-        from authentication.models import Alumno
         alumno = Alumno.objects.select_related('usuario', 'grupo', 'grupo__nivel').get(
             usuario_id=alumno_id
         )
@@ -1770,7 +1716,6 @@ def reporte_alumno(request, alumno_id):
         )
 
     # Verificar que el profesor enseña a este alumno
-    from academic.models import Horario
     horarios_profesor = Horario.objects.filter(
         profesor_materia__profesor=profesor,
         grupo=alumno.grupo
@@ -1792,7 +1737,6 @@ def reporte_alumno(request, alumno_id):
     }
 
     # Obtener matriculación activa
-    from academic.models import Matriculacion
     gestion_activa = Gestion.objects.filter(activa=True).first()
 
     try:
@@ -1920,7 +1864,6 @@ def reporte_alumno(request, alumno_id):
 
     return Response(serializer.data)
 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def reporte_materia(request, materia_id):
@@ -1930,7 +1873,6 @@ def reporte_materia(request, materia_id):
         return error_response
 
     try:
-        from academic.models import Materia
         materia = Materia.objects.get(pk=materia_id)
     except Materia.DoesNotExist:
         return Response(
@@ -1939,7 +1881,6 @@ def reporte_materia(request, materia_id):
         )
 
     # Verificar que el profesor enseña esta materia
-    from academic.models import ProfesorMateria
     profesor_materia = ProfesorMateria.objects.filter(
         profesor=profesor,
         materia=materia
@@ -1960,7 +1901,6 @@ def reporte_materia(request, materia_id):
     }
 
     # Grupos donde se enseña
-    from academic.models import Horario
     horarios = Horario.objects.filter(
         profesor_materia=profesor_materia
     ).select_related('grupo', 'grupo__nivel', 'trimestre')
@@ -2029,7 +1969,6 @@ def reporte_materia(request, materia_id):
 
     return Response(serializer.data)
 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def promedio_grupo(request, grupo_id):
@@ -2046,7 +1985,6 @@ def promedio_grupo(request, grupo_id):
         )
 
     try:
-        from academic.models import Grupo, Materia
         grupo = Grupo.objects.select_related('nivel').get(pk=grupo_id)
         materia = Materia.objects.get(pk=materia_id)
     except (Grupo.DoesNotExist, Materia.DoesNotExist):
@@ -2056,7 +1994,6 @@ def promedio_grupo(request, grupo_id):
         )
 
     # Verificar permisos
-    from academic.models import ProfesorMateria, Horario
     profesor_materia = ProfesorMateria.objects.filter(
         profesor=profesor,
         materia=materia
@@ -2092,7 +2029,6 @@ def promedio_grupo(request, grupo_id):
     }
 
     # Obtener alumnos del grupo
-    from academic.models import Matriculacion
     gestion_activa = Gestion.objects.filter(activa=True).first()
 
     matriculaciones = Matriculacion.objects.filter(
@@ -2206,4 +2142,3 @@ def promedio_grupo(request, grupo_id):
     )
 
     return Response(serializer.data)
-

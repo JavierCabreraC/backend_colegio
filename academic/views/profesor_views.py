@@ -1,18 +1,14 @@
+from datetime import date
 from django.db.models import Q
-from django.utils import timezone
 from rest_framework import status
-from django.db.models import Count
-from rest_framework.permissions import IsAuthenticated
-from authentication.models import Alumno, Profesor
-from shared.permissions import IsDirector
 from django.core.paginator import Paginator
 from rest_framework.response import Response
 from audit.utils import registrar_accion_bitacora
+from authentication.models import Alumno, Profesor
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
-from ..models import Materia, Aula, Nivel, Grupo, Gestion, ProfesorMateria, Horario, Matriculacion, Trimestre
-from .director_views import (
-    MateriaSerializer, MateriaListSerializer, AulaSerializer, AulaListSerializer, NivelSerializer, GrupoSerializer,
-    GestionSerializer, ProfesorMateriaSerializer, HorarioSerializer, MatriculacionSerializer, TrimestreSerializer,
+from ..models import Grupo, Gestion, ProfesorMateria, Horario, Trimestre
+from ..serializers import (
     MisHorarios_Serializer, MisMaterias_Serializer, MisGrupos_Serializer, MisAlumnos_Serializer
 )
 
@@ -246,7 +242,6 @@ def mi_horario_hoy(request):
             status=status.HTTP_404_NOT_FOUND
         )
 
-    from datetime import date
     hoy = date.today()
     dia_semana = hoy.weekday() + 1  # Django usa 1=Lunes
 
@@ -330,7 +325,6 @@ def mi_horario_semana(request):
             )
     else:
         # Usar trimestre actual
-        from datetime import date
         gestion_activa = Gestion.objects.filter(activa=True).first()
         if not gestion_activa:
             return Response({'error': 'No hay gestión activa'}, status=400)

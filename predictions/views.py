@@ -1,28 +1,19 @@
+from django.db.models import Avg
 from rest_framework import status
 from shared.permissions import IsProfesor
 from .models import PrediccionRendimiento
 from .ml_engine import ModeloRendimientoML
-from django.db.models import Avg, Count, Q
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from datetime import date, datetime, timedelta
 from authentication.models import Alumno, Profesor
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
+from evaluations.models import ( NotaExamen, Asistencia, HistoricoTrimestral )
+from academic.models import (ProfesorMateria, Grupo, Gestion, Trimestre, Matriculacion, Materia, Horario )
 from .serializers import (
-    MisAlumnosPrediccionSerializer,
-    PrediccionAlumnoMateriaSerializer,
-    AnalisisRiesgoGrupoSerializer,
-    AlertaInteligentSerializer,
-    EstadisticasMLSerializer
-)
-from academic.models import (
-    ProfesorMateria, Grupo, Gestion, Trimestre,
-    Matriculacion, Materia
-)
-from evaluations.models import (
-    NotaExamen, NotaTarea, Asistencia, Participacion,
-    HistoricoTrimestral
+    MisAlumnosPrediccionSerializer, PrediccionAlumnoMateriaSerializer, AnalisisRiesgoGrupoSerializer,
+    AlertaInteligentSerializer, EstadisticasMLSerializer
 )
 
 
@@ -57,7 +48,6 @@ def mis_alumnos_predicciones(request):
         grupos_profesor = set()
         for pm in profesor_materias:
             # Obtener horarios para encontrar grupos
-            from academic.models import Horario
             horarios = Horario.objects.filter(
                 profesor_materia=pm,
                 trimestre__gestion=gestion_activa
@@ -263,7 +253,6 @@ def analisis_riesgo_grupo(request, grupo_id):
 
         # Verificar que el profesor enseña en este grupo
         gestion_activa = Gestion.objects.filter(activa=True).first()
-        from academic.models import Horario
         horarios_profesor = Horario.objects.filter(
             profesor_materia__profesor=profesor,
             grupo=grupo,
@@ -401,7 +390,6 @@ def alertas_inteligentes(request):
 
         for pm in profesor_materias:
             # Obtener alumnos de esta materia
-            from academic.models import Horario
             horarios = Horario.objects.filter(
                 profesor_materia=pm,
                 trimestre__gestion=gestion_activa

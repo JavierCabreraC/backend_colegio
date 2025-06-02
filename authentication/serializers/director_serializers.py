@@ -1,3 +1,4 @@
+from datetime import date
 from rest_framework import serializers
 from ..models import Director, Profesor, Alumno
 from .shared_serializers import UsuarioSerializer
@@ -23,7 +24,6 @@ class ProfesorSerializer(serializers.ModelSerializer):
         return f"{obj.nombres} {obj.apellidos}"
 
     def get_edad(self, obj):
-        from datetime import date
         if obj.fecha_nacimiento:
             today = date.today()
             return today.year - obj.fecha_nacimiento.year - (
@@ -106,7 +106,6 @@ class AlumnoSerializer(serializers.ModelSerializer):
         return f"{obj.nombres} {obj.apellidos}"
 
     def get_edad(self, obj):
-        from datetime import date
         if obj.fecha_nacimiento:
             today = date.today()
             return today.year - obj.fecha_nacimiento.year - (

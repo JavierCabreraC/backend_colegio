@@ -1,13 +1,10 @@
 from django.db.models import Count
 from shared.permissions import IsDirector
 from rest_framework.response import Response
+from ..models import Materia, Aula, Nivel, Grupo
+from ..serializers import ( MateriaListSerializer )
 from rest_framework.decorators import api_view, permission_classes
-from ..serializers import (
-    MateriaSerializer, MateriaListSerializer, AulaSerializer, AulaListSerializer, NivelSerializer, GrupoSerializer,
-    GestionSerializer, ProfesorMateriaSerializer, HorarioSerializer, MatriculacionSerializer, TrimestreSerializer,
-    MisHorarios_Serializer, MisMaterias_Serializer, MisGrupos_Serializer, MisAlumnos_Serializer
-)
-from ..models import Materia, Aula, Nivel, Grupo, Gestion, ProfesorMateria, Horario, Matriculacion, Trimestre
+
 
 # Vista de estadísticas académicas
 @api_view(['GET'])

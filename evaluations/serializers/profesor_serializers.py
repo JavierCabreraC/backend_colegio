@@ -1,5 +1,7 @@
+from datetime import date
 from rest_framework import serializers
-from academic.models import ProfesorMateria, Trimestre, Horario
+from authentication.models import Profesor
+from academic.models import ProfesorMateria, Trimestre, Horario, Matriculacion
 from ..models import Examen, Tarea, NotaExamen, NotaTarea, Participacion, Asistencia
 
 
@@ -29,8 +31,6 @@ class MisExamenes_Serializer(serializers.ModelSerializer):
 
     def get_total_pendientes(self, obj):
         """Contar alumnos pendientes de calificación"""
-        from academic.models import Matriculacion, Horario
-
         # Obtener grupos donde se imparte este examen
         grupos_ids = Horario.objects.filter(
             profesor_materia=obj.profesor_materia,
@@ -45,7 +45,6 @@ class MisExamenes_Serializer(serializers.ModelSerializer):
         ).count()
 
         return alumnos_matriculados - self.get_total_calificados(obj)
-
 
 class ExamenCreateUpdateSerializer(serializers.ModelSerializer):
     """Serializer para crear/actualizar exámenes"""
@@ -63,7 +62,6 @@ class ExamenCreateUpdateSerializer(serializers.ModelSerializer):
         if request and hasattr(request, 'user'):
             if request.user.tipo_usuario == 'profesor':
                 try:
-                    from authentication.models import Profesor
                     profesor = Profesor.objects.get(usuario=request.user)
                     if value.profesor != profesor:
                         raise serializers.ValidationError(
@@ -75,8 +73,6 @@ class ExamenCreateUpdateSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         """Validaciones adicionales"""
-        from datetime import date
-
         # Validar que la fecha del examen no sea en el pasado
         if attrs.get('fecha_examen') and attrs['fecha_examen'] < date.today():
             raise serializers.ValidationError({
@@ -91,7 +87,6 @@ class ExamenCreateUpdateSerializer(serializers.ModelSerializer):
             })
 
         return attrs
-
 
 class MisTareas_Serializer(serializers.ModelSerializer):
     """Serializer para tareas del profesor"""
@@ -120,8 +115,6 @@ class MisTareas_Serializer(serializers.ModelSerializer):
 
     def get_total_pendientes(self, obj):
         """Contar alumnos pendientes de calificación"""
-        from academic.models import Matriculacion, Horario
-
         # Obtener grupos donde se imparte esta tarea
         grupos_ids = Horario.objects.filter(
             profesor_materia=obj.profesor_materia,
@@ -139,12 +132,10 @@ class MisTareas_Serializer(serializers.ModelSerializer):
 
     def get_dias_restantes(self, obj):
         """Días restantes para la entrega"""
-        from datetime import date
         if obj.fecha_entrega:
             delta = obj.fecha_entrega - date.today()
             return delta.days if delta.days >= 0 else 0
         return 0
-
 
 class TareaCreateUpdateSerializer(serializers.ModelSerializer):
     """Serializer para crear/actualizar tareas"""
@@ -162,7 +153,6 @@ class TareaCreateUpdateSerializer(serializers.ModelSerializer):
         if request and hasattr(request, 'user'):
             if request.user.tipo_usuario == 'profesor':
                 try:
-                    from authentication.models import Profesor
                     profesor = Profesor.objects.get(usuario=request.user)
                     if value.profesor != profesor:
                         raise serializers.ValidationError(
@@ -174,8 +164,6 @@ class TareaCreateUpdateSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         """Validaciones adicionales"""
-        from datetime import date
-
         fecha_asignacion = attrs.get('fecha_asignacion')
         fecha_entrega = attrs.get('fecha_entrega')
 
@@ -202,7 +190,6 @@ class TareaCreateUpdateSerializer(serializers.ModelSerializer):
 
         return attrs
 
-
 # Serializers auxiliares para referencias rápidas
 class ProfesorMateriaSimpleSerializer(serializers.ModelSerializer):
     """Serializer simple para profesor-materia"""
@@ -213,7 +200,6 @@ class ProfesorMateriaSimpleSerializer(serializers.ModelSerializer):
         model = ProfesorMateria
         fields = ['id', 'materia_codigo', 'materia_nombre']
 
-
 class TrimestreSimpleSerializer(serializers.ModelSerializer):
     """Serializer simple para trimestres"""
     gestion_anio = serializers.IntegerField(source='gestion.anio', read_only=True)
@@ -221,7 +207,6 @@ class TrimestreSimpleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Trimestre
         fields = ['id', 'numero', 'nombre', 'gestion_anio']
-
 
 # ==========================================
 # SERIALIZERS PARA CALIFICACIONES
@@ -238,7 +223,6 @@ class AlumnoParaCalificarSerializer(serializers.Serializer):
     ya_calificado = serializers.BooleanField()
     nota_actual = serializers.DecimalField(max_digits=5, decimal_places=2, allow_null=True)
     fecha_calificacion = serializers.DateTimeField(allow_null=True)
-
 
 class NotaExamenSerializer(serializers.ModelSerializer):
     """Serializer para notas de exámenes"""
@@ -273,8 +257,6 @@ class NotaExamenSerializer(serializers.ModelSerializer):
 
         if matriculacion and examen:
             # Verificar que el alumno está en un grupo que recibe esta materia
-            from academic.models import Horario
-
             tiene_clase = Horario.objects.filter(
                 profesor_materia=examen.profesor_materia,
                 grupo=matriculacion.alumno.grupo,
@@ -287,7 +269,6 @@ class NotaExamenSerializer(serializers.ModelSerializer):
                 )
 
         return attrs
-
 
 class CalificarExamenSerializer(serializers.Serializer):
     """Serializer para calificar un examen"""
@@ -305,14 +286,12 @@ class CalificarExamenSerializer(serializers.Serializer):
     def validate(self, attrs):
         """Validar que el examen y matriculación existen y son compatibles"""
         try:
-            from academic.models import Matriculacion
             matriculacion = Matriculacion.objects.get(id=attrs['matriculacion_id'])
             examen = Examen.objects.get(id=attrs['examen_id'])
         except (Matriculacion.DoesNotExist, Examen.DoesNotExist):
             raise serializers.ValidationError("Matriculación o examen no encontrado")
 
         # Verificar que el alumno tiene clase con este profesor en esta materia
-        from academic.models import Horario
         tiene_clase = Horario.objects.filter(
             profesor_materia=examen.profesor_materia,
             grupo=matriculacion.alumno.grupo,
@@ -327,7 +306,6 @@ class CalificarExamenSerializer(serializers.Serializer):
         attrs['matriculacion'] = matriculacion
         attrs['examen'] = examen
         return attrs
-
 
 class CalificarMasivoSerializer(serializers.Serializer):
     """Serializer para calificación masiva"""
@@ -362,7 +340,6 @@ class CalificarMasivoSerializer(serializers.Serializer):
 
         return value
 
-
 class NotaTareaSerializer(serializers.ModelSerializer):
     """Serializer para notas de tareas"""
     alumno_matricula = serializers.CharField(source='matriculacion.alumno.matricula', read_only=True)
@@ -388,7 +365,6 @@ class NotaTareaSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("La nota debe estar entre 0 y 100")
         return value
 
-
 class CalificarTareaSerializer(serializers.Serializer):
     """Serializer para calificar una tarea"""
     matriculacion_id = serializers.IntegerField()
@@ -405,14 +381,12 @@ class CalificarTareaSerializer(serializers.Serializer):
     def validate(self, attrs):
         """Validar que la tarea y matriculación existen y son compatibles"""
         try:
-            from academic.models import Matriculacion
             matriculacion = Matriculacion.objects.get(id=attrs['matriculacion_id'])
             tarea = Tarea.objects.get(id=attrs['tarea_id'])
         except (Matriculacion.DoesNotExist, Tarea.DoesNotExist):
             raise serializers.ValidationError("Matriculación o tarea no encontrada")
 
         # Verificar que el alumno tiene clase con este profesor en esta materia
-        from academic.models import Horario
         tiene_clase = Horario.objects.filter(
             profesor_materia=tarea.profesor_materia,
             grupo=matriculacion.alumno.grupo,
@@ -427,7 +401,6 @@ class CalificarTareaSerializer(serializers.Serializer):
         attrs['matriculacion'] = matriculacion
         attrs['tarea'] = tarea
         return attrs
-
 
 class TareasPendientesSerializer(serializers.ModelSerializer):
     """Serializer para tareas pendientes de calificación"""
@@ -445,8 +418,6 @@ class TareasPendientesSerializer(serializers.ModelSerializer):
 
     def get_total_entregas(self, obj):
         """Total de alumnos que deben entregar"""
-        from academic.models import Horario, Matriculacion
-
         grupos_ids = Horario.objects.filter(
             profesor_materia=obj.profesor_materia,
             trimestre=obj.trimestre
@@ -465,12 +436,10 @@ class TareasPendientesSerializer(serializers.ModelSerializer):
 
     def get_dias_vencimiento(self, obj):
         """Días desde el vencimiento (negativo = vencida)"""
-        from datetime import date
         if obj.fecha_entrega:
             delta = date.today() - obj.fecha_entrega
             return -delta.days  # Negativo si ya venció
         return 0
-
 
 # ==========================================
 # SERIALIZERS PARA ASISTENCIAS
@@ -510,7 +479,6 @@ class AsistenciaSerializer(serializers.ModelSerializer):
         }
         return estados.get(obj.estado, obj.estado)
 
-
 class TomarAsistenciaSerializer(serializers.Serializer):
     """Serializer para tomar asistencia de una clase"""
     horario_id = serializers.IntegerField()
@@ -525,7 +493,6 @@ class TomarAsistenciaSerializer(serializers.Serializer):
     def validate_horario_id(self, value):
         """Validar que el horario existe y pertenece al profesor"""
         try:
-            from academic.models import Horario
             horario = Horario.objects.get(id=value)
         except Horario.DoesNotExist:
             raise serializers.ValidationError("Horario no encontrado")
@@ -535,7 +502,6 @@ class TomarAsistenciaSerializer(serializers.Serializer):
         if request and hasattr(request, 'user'):
             if request.user.tipo_usuario == 'profesor':
                 try:
-                    from authentication.models import Profesor
                     profesor = Profesor.objects.get(usuario=request.user)
                     if horario.profesor_materia.profesor != profesor:
                         raise serializers.ValidationError(
@@ -548,7 +514,6 @@ class TomarAsistenciaSerializer(serializers.Serializer):
 
     def validate_fecha(self, value):
         """Validar que la fecha no sea futura"""
-        from datetime import date
         if value > date.today():
             raise serializers.ValidationError("No puedes tomar asistencia de fechas futuras")
         return value
@@ -572,7 +537,6 @@ class TomarAsistenciaSerializer(serializers.Serializer):
 
         return value
 
-
 class ListaClaseSerializer(serializers.Serializer):
     """Serializer para lista de alumnos de una clase"""
     id_matriculacion = serializers.IntegerField()
@@ -582,7 +546,6 @@ class ListaClaseSerializer(serializers.Serializer):
     grupo_nombre = serializers.CharField()
     foto_url = serializers.CharField(allow_null=True)
     asistencia_actual = serializers.DictField(allow_null=True)
-
 
 class MisAsistenciasSerializer(serializers.ModelSerializer):
     """Serializer para historial de asistencias del profesor"""
@@ -620,7 +583,6 @@ class MisAsistenciasSerializer(serializers.ModelSerializer):
     def get_justificadas(self, obj):
         return getattr(obj, 'justificadas', 0)
 
-
 # ==========================================
 # SERIALIZERS PARA PARTICIPACIONES
 # ==========================================
@@ -654,7 +616,6 @@ class ParticipacionSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("El valor de participación debe estar entre 1 y 5")
         return value
 
-
 class RegistrarParticipacionSerializer(serializers.Serializer):
     """Serializer para registrar participación"""
     matriculacion_id = serializers.IntegerField()
@@ -671,7 +632,6 @@ class RegistrarParticipacionSerializer(serializers.Serializer):
 
     def validate_fecha(self, value):
         """Validar que la fecha no sea futura"""
-        from datetime import date
         if value > date.today():
             raise serializers.ValidationError("No puedes registrar participaciones de fechas futuras")
         return value
@@ -679,7 +639,6 @@ class RegistrarParticipacionSerializer(serializers.Serializer):
     def validate(self, attrs):
         """Validaciones adicionales"""
         try:
-            from academic.models import Matriculacion, Horario
             matriculacion = Matriculacion.objects.get(id=attrs['matriculacion_id'])
             horario = Horario.objects.get(id=attrs['horario_id'])
         except (Matriculacion.DoesNotExist, Horario.DoesNotExist):
@@ -696,7 +655,6 @@ class RegistrarParticipacionSerializer(serializers.Serializer):
         if request and hasattr(request, 'user'):
             if request.user.tipo_usuario == 'profesor':
                 try:
-                    from authentication.models import Profesor
                     profesor = Profesor.objects.get(usuario=request.user)
                     if horario.profesor_materia.profesor != profesor:
                         raise serializers.ValidationError(

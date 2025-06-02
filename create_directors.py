@@ -1,6 +1,5 @@
 import os
 import django
-import sys
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend_colegio.settings')
 django.setup()

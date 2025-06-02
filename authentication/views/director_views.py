@@ -1,16 +1,20 @@
 import json
+from datetime import date
 from django.db.models import Q
 from rest_framework import status
+from django.db.models import Count
 from shared.permissions import IsDirector
 from django.core.paginator import Paginator
 from rest_framework.response import Response
 from ..models import Profesor, Alumno, Usuario
 from audit.utils import registrar_accion_bitacora
+from academic.models import Materia, Aula, Gestion, Trimestre, Horario, Matriculacion
 from rest_framework.decorators import api_view, permission_classes
 from ..serializers.director_serializers import (
     ProfesorSerializer, ProfesorListSerializer,
     AlumnoSerializer, AlumnoListSerializer
 )
+
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsDirector])
@@ -333,9 +337,6 @@ def alumno_detail(request, pk):
 @permission_classes([IsDirector])
 def dashboard_director(request):
     """Dashboard completo para directores"""
-    from academic.models import Materia, Aula, Gestion, Trimestre, Horario, Matriculacion
-    from datetime import date
-
     # Estadísticas básicas (ya existentes)
     stats = {
         'total_profesores': Profesor.objects.count(),
@@ -416,9 +417,6 @@ def dashboard_director(request):
     ultimos_alumnos = Alumno.objects.select_related('usuario').order_by('-created_at')[:5]
 
     # Distribución de alumnos por nivel
-    from django.db.models import Count
-    from authentication.serializers import ProfesorListSerializer, AlumnoListSerializer
-
     distribucion_niveles = Alumno.objects.values(
         'grupo__nivel__numero', 'grupo__nivel__nombre'
     ).annotate(

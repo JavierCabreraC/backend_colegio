@@ -1,14 +1,18 @@
 import logging
 from ..models import Usuario
+from datetime import timedelta
+from django.db.models import Q
 from rest_framework import status
+from django.utils import timezone
 from rest_framework.response import Response
 from audit.utils import registrar_accion_bitacora
 from rest_framework_simplejwt.tokens import RefreshToken
+from ..serializers.shared_serializers import LoginSerializer
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
-from ..serializers.shared_serializers import LoginSerializer
+
 
 logger = logging.getLogger(__name__)
 
@@ -88,10 +92,6 @@ def user_activity(request):
     if request.user.tipo_usuario != 'director':
         return Response({'error': 'No autorizado'}, status=403)
 
-    from django.db.models import Q
-    from datetime import timedelta
-    from django.utils import timezone
-
     # Usuarios activos en los últimos 30 días
     fecha_limite = timezone.now() - timedelta(days=30)
     usuarios_activos = Usuario.objects.filter(
@@ -127,3 +127,4 @@ def user_activity(request):
     }
 
     return Response(data)
+

@@ -1,4 +1,6 @@
+from datetime import datetime
 from rest_framework import serializers
+from authentication.models import Alumno
 from ..models import (
     Nivel, Grupo, Materia, Aula, ProfesorMateria,
     Gestion, Trimestre, Matriculacion, Horario
@@ -23,7 +25,7 @@ class NivelSerializer(serializers.ModelSerializer):
         return obj.grupo_set.count()
 
     def get_total_alumnos(self, obj):
-        from authentication.models import Alumno
+
         return Alumno.objects.filter(grupo__nivel=obj).count()
 
 class GrupoSerializer(serializers.ModelSerializer):
@@ -104,7 +106,6 @@ class AulaSerializer(serializers.ModelSerializer):
 
     def get_ocupacion_actual(self, obj):
         # Porcentaje de uso del aula (basado en horarios asignados)
-        from datetime import datetime
         total_slots = 5 * 6  # 5 días x 6 horas aprox por día
         horarios_usados = obj.horario_set.count()
         return round((horarios_usados / total_slots) * 100, 2) if total_slots > 0 else 0

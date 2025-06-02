@@ -1,4 +1,3 @@
-# Importar todos los serializers para mantener compatibilidad
 from .profesor_serializers import (
     # Evaluaciones básicas
     MisExamenes_Serializer, ExamenCreateUpdateSerializer,
