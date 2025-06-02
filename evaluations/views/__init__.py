@@ -32,7 +32,6 @@ from .profesor_views import (
     estadisticas_mis_clases, reporte_grupo, reporte_alumno, reporte_materia, promedio_grupo
 )
 
-# Mantener las importaciones existentes para no romper urls.py
 __all__ = [
     # ==========================================
     # GESTIÓN DE EVALUACIONES (6 funciones)

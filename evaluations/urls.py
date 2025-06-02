@@ -3,19 +3,19 @@ from django.urls import path
 
 urlpatterns = [
     # ==========================================
-    # GESTIÓN DE EXÁMENES (Fase 2)
+    # GESTIÓN DE EXÁMENES
     # ==========================================
     path('mis-examenes/', views.mis_examenes, name='mis-examenes'),
     path('mis-examenes/<int:pk>/', views.examen_detail, name='examen-detail'),
 
     # ==========================================
-    # GESTIÓN DE TAREAS (Fase 2)
+    # GESTIÓN DE TAREAS
     # ==========================================
     path('mis-tareas/', views.mis_tareas, name='mis-tareas'),
     path('mis-tareas/<int:pk>/', views.tarea_detail, name='tarea-detail'),
 
     # ==========================================
-    # CALIFICACIÓN DE EXÁMENES (Fase 3)
+    # CALIFICACIÓN DE EXÁMENES
     # ==========================================
     path('examen/<int:examen_id>/alumnos/', views.examen_alumnos, name='examen-alumnos'),
     path('calificar-examen/', views.calificar_examen, name='calificar-examen'),
@@ -23,7 +23,7 @@ urlpatterns = [
     path('calificar-masivo/', views.calificar_masivo, name='calificar-masivo'),
 
     # ==========================================
-    # CALIFICACIÓN DE TAREAS (Fase 3)
+    # CALIFICACIÓN DE TAREAS
     # ==========================================
     path('tarea/<int:tarea_id>/entregas/', views.tarea_entregas, name='tarea-entregas'),
     path('calificar-tarea/', views.calificar_tarea, name='calificar-tarea'),
@@ -31,7 +31,7 @@ urlpatterns = [
     path('tareas-pendientes/', views.tareas_pendientes, name='tareas-pendientes'),
 
     # ==========================================
-    # GESTIÓN DE ASISTENCIAS (Fase 4)
+    # GESTIÓN DE ASISTENCIAS
     # ==========================================
     path('mis-asistencias/', views.mis_asistencias, name='mis-asistencias'),
     path('tomar-asistencia/', views.tomar_asistencia, name='tomar-asistencia'),
@@ -40,7 +40,7 @@ urlpatterns = [
     path('lista-clase/', views.lista_clase, name='lista-clase'),
 
     # ==========================================
-    # GESTIÓN DE PARTICIPACIONES (Fase 4)
+    # GESTIÓN DE PARTICIPACIONES
     # ==========================================
     path('mis-participaciones/', views.mis_participaciones, name='mis-participaciones'),
     path('registrar-participacion/', views.registrar_participacion, name='registrar-participacion'),
@@ -48,7 +48,7 @@ urlpatterns = [
     path('participaciones/clase/', views.participaciones_clase, name='participaciones-clase'),
 
     # ==========================================
-    # REPORTES Y ANÁLISIS (Fase 5)
+    # REPORTES Y ANÁLISIS
     # ==========================================
     path('estadisticas/mis-clases/', views.estadisticas_mis_clases, name='estadisticas-mis-clases'),
     path('reporte/grupo/<int:grupo_id>/', views.reporte_grupo, name='reporte-grupo'),

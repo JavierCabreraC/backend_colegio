@@ -1,5 +1,5 @@
-# Importar todas las vistas para mantener compatibilidad
 from .shared_views import academic_stats
+
 from .director_views import (
     # CRUD Materias
     materia_list_create, materia_detail,
@@ -18,12 +18,12 @@ from .director_views import (
     # Asignaciones Profesor-Materia
     profesor_materia_list_create, profesor_materia_delete
 )
+
 from .profesor_views import (
     mis_materias, mis_grupos, mis_alumnos,
     mis_horarios, mi_horario_hoy, mi_horario_semana
 )
 
-# Mantener las importaciones existentes para no romper urls.py
 __all__ = [
     # Shared
     'academic_stats',
