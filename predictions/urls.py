@@ -11,4 +11,13 @@ urlpatterns = [
 
     # Endpoint adicional para estadísticas del modelo
     path('estadisticas/', views.estadisticas_modelo, name='estadisticas_modelo'),
+
+    # ==========================================
+    # ENDPOINTS PARA ALUMNOS
+    # ==========================================
+    path('mis-predicciones/', views.mis_predicciones, name='alumno-mis-predicciones'),
+    path('mi-prediccion/<int:materia_id>/', views.mi_prediccion_detallada, name='alumno-prediccion-detallada'),
+    path('mis-recomendaciones/', views.mis_recomendaciones, name='alumno-mis-recomendaciones'),
+    path('mi-resumen/', views.mi_resumen_predicciones, name='alumno-resumen-predicciones'),
+    path('evolucion/<int:materia_id>/', views.evolucion_prediccion, name='alumno-evolucion-prediccion'),
 ]
