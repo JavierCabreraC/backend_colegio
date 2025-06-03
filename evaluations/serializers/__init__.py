@@ -18,6 +18,13 @@ from .profesor_serializers import (
     ReporteAlumnoSerializer, ReporteMateriaSerializer, PromedioGrupoSerializer
 )
 
+from .alumno_serializers import (
+    ExamenDetalleSerializer, NotaExamenSerializer, TareaDetalleSerializer, NotaTareaSerializer,
+    AsistenciaSerializer, PromedioTrimestreSerializer, ResumenAsistenciaSerializer,
+    ParticipacionAlumnoSerializer, EstadisticasParticipacionSerializer, DashboardRendimientoSerializer,
+    RendimientoMateriaSerializer, TendenciaTrimestreSerializer, AlertaRendimientoSerializer,
+)
+
 __all__ = [
     # Evaluaciones básicas
     'MisExamenes_Serializer', 'ExamenCreateUpdateSerializer',
@@ -35,5 +42,10 @@ __all__ = [
     'ParticipacionesClaseSerializer', 'MisParticipacionesSerializer',
     # Reportes
     'EstadisticasClaseSerializer', 'ReporteGrupoSerializer', 'RendimientoAlumnoSerializer',
-    'ReporteAlumnoSerializer', 'ReporteMateriaSerializer', 'PromedioGrupoSerializer'
+    'ReporteAlumnoSerializer', 'ReporteMateriaSerializer', 'PromedioGrupoSerializer',
+    # Alumnos
+    'ExamenDetalleSerializer', 'NotaExamenSerializer', 'TareaDetalleSerializer', 'NotaTareaSerializer',
+    'AsistenciaSerializer', 'PromedioTrimestreSerializer', 'ResumenAsistenciaSerializer',
+    'ParticipacionAlumnoSerializer', 'EstadisticasParticipacionSerializer', 'DashboardRendimientoSerializer',
+    'RendimientoMateriaSerializer', 'TendenciaTrimestreSerializer', 'AlertaRendimientoSerializer',
 ]

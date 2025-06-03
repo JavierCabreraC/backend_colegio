@@ -61,4 +61,23 @@ urlpatterns = [
     # ==========================================
     path('opciones/profesor-materias/', views.opciones_profesor_materias, name='opciones-profesor-materias'),
     path('opciones/trimestres/', views.opciones_trimestres, name='opciones-trimestres'),
+
+    # ==========================================
+    # ENDPOINTS PARA ALUMNOS
+    # ==========================================
+    # Notas y evaluaciones
+    path('mis-notas/', views.mis_notas, name='alumno-mis-notas'),
+    path('mis-notas/promedio-trimestral/', views.mis_notas_promedio_trimestral, name='alumno-promedio-trimestral'),
+
+    # Asistencias
+    path('mis-asistencias/', views.mis_asistencias, name='alumno-mis-asistencias'),
+    path('mis-asistencias/resumen/', views.mis_asistencias_resumen, name='alumno-asistencias-resumen'),
+
+    # Participaciones
+    path('mis-participaciones/', views.mis_participaciones, name='alumno-mis-participaciones'),
+    path('mis-participaciones/estadisticas/', views.mis_participaciones_estadisticas, name='alumno-participaciones-estadisticas'),
+
+    # Dashboard y rendimiento
+    path('mi-dashboard/', views.mi_dashboard_rendimiento, name='alumno-dashboard'),
+    path('mi-rendimiento/', views.mi_rendimiento_detallado, name='alumno-rendimiento-detallado'),
 ]

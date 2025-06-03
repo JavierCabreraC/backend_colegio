@@ -47,4 +47,9 @@ urlpatterns = [
     path('mis-horarios/', views.mis_horarios, name='mis-horarios'),
     path('mi-horario/hoy/', views.mi_horario_hoy, name='mi-horario-hoy'),
     path('mi-horario/semana/', views.mi_horario_semana, name='mi-horario-semana'),
+
+    # ==========================================
+    # ENDPOINTS PARA ALUMNOS
+    # ==========================================
+    path('mi-horario/', views.mi_horario, name='mi-horario'),
 ]

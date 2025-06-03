@@ -32,6 +32,12 @@ from .profesor_views import (
     estadisticas_mis_clases, reporte_grupo, reporte_alumno, reporte_materia, promedio_grupo
 )
 
+from .alumno_views import (
+    mis_notas, mis_notas_promedio_trimestral, mis_asistencias, mis_asistencias_resumen,
+    mis_participaciones, mis_participaciones_estadisticas, mi_dashboard_rendimiento,
+    mi_rendimiento_detallado
+)
+
 __all__ = [
     # ==========================================
     # GESTIÓN DE EVALUACIONES (6 funciones)
@@ -59,5 +65,10 @@ __all__ = [
     # ==========================================
     # REPORTES Y ANÁLISIS (5 funciones)
     # ==========================================
-    'estadisticas_mis_clases', 'reporte_grupo', 'reporte_alumno', 'reporte_materia', 'promedio_grupo'
+    'estadisticas_mis_clases', 'reporte_grupo', 'reporte_alumno', 'reporte_materia', 'promedio_grupo',
+
+    # Alumnos:
+    'mis_notas', 'mis_notas_promedio_trimestral', 'mis_asistencias', 'mis_asistencias_resumen',
+    'mis_participaciones', 'mis_participaciones_estadisticas', 'mi_dashboard_rendimiento',
+    'mi_rendimiento_detallado'
 ]

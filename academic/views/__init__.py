@@ -24,6 +24,8 @@ from .profesor_views import (
     mis_horarios, mi_horario_hoy, mi_horario_semana
 )
 
+from .alumno_views import ( mi_horario )
+
 __all__ = [
     # Shared
     'academic_stats',
@@ -38,5 +40,7 @@ __all__ = [
     'profesor_materia_list_create', 'profesor_materia_delete',
     # Profesor views
     'mis_materias', 'mis_grupos', 'mis_alumnos',
-    'mis_horarios', 'mi_horario_hoy', 'mi_horario_semana'
+    'mis_horarios', 'mi_horario_hoy', 'mi_horario_semana',
+    # Alumnos
+    'mi_horario'
 ]
