@@ -52,7 +52,7 @@ def validar_profesor_autenticado(request):
 # ==========================================
 
 @api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
+#@permission_classes([IsAuthenticated])
 def mis_examenes(request):
     """
     GET: Listar exámenes del profesor
@@ -194,7 +194,7 @@ def examen_detail(request, pk):
 # ==========================================
 
 @api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
+#@permission_classes([IsAuthenticated])
 def mis_tareas(request):
     """
     GET: Listar tareas del profesor
@@ -811,7 +811,7 @@ def nota_tarea_detail(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+#@permission_classes([IsAuthenticated])
 def tareas_pendientes(request):
     """Tareas pendientes de calificación del profesor"""
     profesor, error_response = validar_profesor_autenticado(request)

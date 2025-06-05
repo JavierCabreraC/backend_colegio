@@ -1,3 +1,4 @@
+import random
 from django.db.models import Avg
 from rest_framework import status
 from shared.permissions import IsProfesor
@@ -16,6 +17,70 @@ from ..serializers import (
     AlertaInteligentSerializer, EstadisticasMLSerializer
 )
 
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsProfesor])
+def mis_alumnos_predicciones_dummy_simple(request):
+    """
+    GET /api/predictions/mis-alumnos-simple/
+    Vista DUMMY simple sin serializer
+    """
+
+    # Nombres y apellidos bolivianos
+    nombres = ["Carlos", "María", "José", "Ana", "Luis", "Carmen", "Pedro", "Rosa", "Miguel", "Elena"]
+    apellidos = ["Mamani", "Quispe", "Condori", "Flores", "Choque", "Vargas", "García", "López"]
+    grupos = ["1°A", "1°B", "2°A", "2°B", "3°A", "3°B"]
+
+    # Estadísticas aleatorias que sumen 60
+    alto_riesgo = random.randint(8, 18)
+    medio_riesgo = random.randint(15, 25)
+    bajo_riesgo = 60 - alto_riesgo - medio_riesgo
+
+    if bajo_riesgo < 5:
+        bajo_riesgo = random.randint(5, 15)
+        medio_riesgo = 60 - alto_riesgo - bajo_riesgo
+
+    # Generar 20 alumnos
+    alumnos = []
+    for i in range(20):
+        # Nivel de riesgo basado en distribución
+        if i < 6:  # ~30% alto riesgo
+            nivel = "alto"
+            promedio = round(random.uniform(35, 49), 2)
+            materias_riesgo = random.randint(3, 6)
+        elif i < 14:  # ~40% medio riesgo
+            nivel = "medio"
+            promedio = round(random.uniform(50, 69), 2)
+            materias_riesgo = random.randint(1, 3)
+        else:  # ~30% bajo riesgo
+            nivel = "bajo"
+            promedio = round(random.uniform(70, 95), 2)
+            materias_riesgo = random.randint(0, 1)
+
+        alumno = {
+            'alumno_id': 1000 + i,
+            'matricula': f"EST{20240000 + i + 1}",
+            'nombre_completo': f"{random.choice(nombres)} {random.choice(apellidos)} {random.choice(apellidos)}",
+            'grupo_nombre': random.choice(grupos),
+            'total_materias': random.randint(6, 8),
+            'promedio_predicciones': promedio,
+            'nivel_riesgo_general': nivel,
+            'materias_riesgo_alto': materias_riesgo,
+            'ultima_actualizacion': "2024-12-20T10:30:00Z"
+        }
+        alumnos.append(alumno)
+
+    return Response({
+        'total_alumnos': 60,
+        'estadisticas': {
+            'alto_riesgo': alto_riesgo,
+            'medio_riesgo': medio_riesgo,
+            'bajo_riesgo': bajo_riesgo
+        },
+        'alumnos': alumnos
+    })
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsProfesor])
 def mis_alumnos_predicciones(request):
@@ -27,12 +92,14 @@ def mis_alumnos_predicciones(request):
         # Obtener profesor actual
         profesor = get_object_or_404(Profesor, usuario=request.user)
 
-        # Obtener gestión activa
-        gestion_activa = Gestion.objects.filter(activa=True).first()
+        # CORRECCIÓN: Obtener gestión activa más reciente
+        gestion_activa = Gestion.objects.filter(activa=True).order_by('-anio').first()
         if not gestion_activa:
             return Response({
                 'error': 'No hay gestión académica activa'
             }, status=status.HTTP_400_BAD_REQUEST)
+
+        print(f"🎯 Gestión activa seleccionada: {gestion_activa.nombre}")
 
         # Obtener todas las materias del profesor
         profesor_materias = ProfesorMateria.objects.filter(profesor=profesor)
@@ -42,6 +109,8 @@ def mis_alumnos_predicciones(request):
                 'message': 'No tienes materias asignadas',
                 'data': []
             })
+
+        print(f"📚 Materias del profesor: {[pm.materia.nombre for pm in profesor_materias]}")
 
         # Obtener todos los alumnos únicos de los grupos del profesor
         grupos_profesor = set()
@@ -54,6 +123,8 @@ def mis_alumnos_predicciones(request):
             for horario in horarios:
                 grupos_profesor.add(horario.grupo)
 
+        print(f"👥 Grupos del profesor: {[f'{g.nivel.numero}°{g.letra}' for g in grupos_profesor]}")
+
         # Obtener alumnos matriculados en esos grupos
         matriculaciones = Matriculacion.objects.filter(
             gestion=gestion_activa,
@@ -61,11 +132,20 @@ def mis_alumnos_predicciones(request):
             alumno__grupo__in=grupos_profesor
         ).select_related('alumno')
 
+        print(f"🎓 Alumnos encontrados: {matriculaciones.count()}")
+
         alumnos_data = []
         motor_ml = ModeloRendimientoML()
 
+        # CORRECCIÓN: Intentar entrenar el modelo una sola vez al inicio
+        print("🤖 Inicializando motor ML...")
+        if not motor_ml.modelo_entrenado:
+            exito_entrenamiento = motor_ml.entrenar_modelo()
+            print(f"📊 Entrenamiento exitoso: {exito_entrenamiento}")
+
         for matriculacion in matriculaciones:
             alumno = matriculacion.alumno
+            print(f"🔍 Procesando alumno: {alumno.matricula}")
 
             # Obtener predicciones existentes del alumno
             predicciones = PrediccionRendimiento.objects.filter(
@@ -76,12 +156,14 @@ def mis_alumnos_predicciones(request):
 
             # Si no hay predicciones, generar algunas
             if not predicciones.exists():
+                print(f"   💫 Generando predicciones para {alumno.matricula}")
                 for pm in profesor_materias:
                     try:
                         prediccion_data = motor_ml.predecir_nota(alumno, pm.materia)
                         motor_ml.guardar_prediccion(alumno, pm.materia, prediccion_data)
+                        print(f"      ✅ {pm.materia.codigo}: {prediccion_data['nota_predicha']}")
                     except Exception as e:
-                        print(f"Error generando predicción para {alumno.matricula}: {e}")
+                        print(f"      ❌ Error en {pm.materia.codigo}: {e}")
 
                 # Recargar predicciones
                 predicciones = PrediccionRendimiento.objects.filter(
@@ -120,6 +202,10 @@ def mis_alumnos_predicciones(request):
                     'materias_riesgo_alto': materias_riesgo_alto,
                     'ultima_actualizacion': ultima_actualizacion
                 })
+            else:
+                print(f"   ⚠️ No se pudieron generar predicciones para {alumno.matricula}")
+
+        print(f"📋 Total de alumnos procesados con éxito: {len(alumnos_data)}")
 
         # Ordenar por riesgo (alto primero) y luego por promedio
         alumnos_data.sort(key=lambda x: (
@@ -136,12 +222,27 @@ def mis_alumnos_predicciones(request):
                 'medio_riesgo': len([a for a in alumnos_data if a['nivel_riesgo_general'] == 'medio']),
                 'bajo_riesgo': len([a for a in alumnos_data if a['nivel_riesgo_general'] == 'bajo']),
             },
-            'alumnos': serializer.data
+            'alumnos': serializer.data,
+            'debug_info': {
+                'gestion_activa': gestion_activa.nombre,
+                'total_materias_profesor': profesor_materias.count(),
+                'total_grupos': len(grupos_profesor),
+                'modelo_entrenado': motor_ml.modelo_entrenado,
+                'precision_modelo': motor_ml.precision
+            }
         })
 
     except Exception as e:
+        print(f"❌ Error completo: {str(e)}")
+        import traceback
+        print(f"📍 Traceback: {traceback.format_exc()}")
+
         return Response({
-            'error': f'Error al obtener predicciones: {str(e)}'
+            'error': f'Error al obtener predicciones: {str(e)}',
+            'debug': {
+                'traceback': traceback.format_exc(),
+                'usuario': request.user.email if request.user else 'Anónimo'
+            }
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])

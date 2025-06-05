@@ -5,7 +5,7 @@ urlpatterns = [
     # ==========================================
     # ENDPOINTS PARA PROFESORES
     # ==========================================
-    path('mis-alumnos/', views.mis_alumnos_predicciones, name='profesor-mis-alumnos-predicciones'),
+    path('mis-alumnos/', views.mis_alumnos_predicciones_dummy_simple, name='profesor-mis-alumnos-predicciones'),
     path('alumno/<int:alumno_id>/materia/<str:codigo_materia>/', views.prediccion_alumno_materia, name='profesor-prediccion-alumno-materia'),
     path('grupo/<int:grupo_id>/riesgo/', views.analisis_riesgo_grupo, name='profesor-analisis-riesgo-grupo'),
     path('alertas/mis-clases/', views.alertas_inteligentes, name='profesor-alertas-inteligentes'),

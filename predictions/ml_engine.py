@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from django.db.models import Avg
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from .models import PrediccionRendimiento
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestRegressor
@@ -13,440 +13,488 @@ from evaluations.models import NotaExamen, NotaTarea, Asistencia, Participacion,
 
 class ModeloRendimientoML:
     """
-    Motor de Machine Learning para predicciones de rendimiento académico
-    Utiliza Random Forest para predecir notas futuras basándose en datos históricos
+    Motor simplificado para predicciones de rendimiento académico
+    Usa solo datos de la gestión activa actual con reglas simples
     """
 
     def __init__(self):
-        self.modelo = None
-        self.scaler = None
-        self.feature_names = []
-        self.modelo_entrenado = False
-        self.precision = None
-
-    def obtener_datos_entrenamiento(self):
-        """
-        Extrae datos históricos para entrenar el modelo
-        Retorna: DataFrame con características y notas reales
-        """
-        datos_entrenamiento = []
-
-        # Obtener gestiones anteriores (no la activa)
-        gestiones_anteriores = Gestion.objects.filter(activa=False).order_by('-anio')[:3]
-
-        for gestion in gestiones_anteriores:
-            # Obtener todos los registros históricos trimestrales
-            historicos = HistoricoTrimestral.objects.filter(
-                trimestre__gestion=gestion
-            ).select_related('alumno', 'trimestre', 'materia')
-
-            for historico in historicos:
-                caracteristicas = self.extraer_caracteristicas_alumno(
-                    historico.alumno,
-                    historico.materia,
-                    historico.trimestre
-                )
-
-                if caracteristicas:
-                    caracteristicas['nota_real'] = float(historico.promedio_trimestre)
-                    datos_entrenamiento.append(caracteristicas)
-
-        return pd.DataFrame(datos_entrenamiento)
-
-    def extraer_caracteristicas_alumno(self, alumno, materia, trimestre):
-        """
-        Extrae características relevantes de un alumno para el modelo
-        """
-        try:
-            # Obtener matriculación
-            matriculacion = Matriculacion.objects.get(
-                alumno=alumno,
-                gestion=trimestre.gestion,
-                activa=True
-            )
-
-            # 1. RENDIMIENTO ACADÉMICO PREVIO
-            # Promedio trimestre anterior
-            trimestre_anterior = Trimestre.objects.filter(
-                gestion=trimestre.gestion,
-                numero=trimestre.numero - 1
-            ).first()
-
-            promedio_anterior = 0
-            if trimestre_anterior:
-                hist_anterior = HistoricoTrimestral.objects.filter(
-                    alumno=alumno,
-                    trimestre=trimestre_anterior,
-                    materia=materia
-                ).first()
-                promedio_anterior = float(hist_anterior.promedio_trimestre) if hist_anterior else 0
-
-            # Promedios de exámenes y tareas del trimestre actual
-            notas_examenes = NotaExamen.objects.filter(
-                matriculacion=matriculacion,
-                examen__profesor_materia__materia=materia,
-                examen__trimestre=trimestre
-            )
-
-            notas_tareas = NotaTarea.objects.filter(
-                matriculacion=matriculacion,
-                tarea__profesor_materia__materia=materia,
-                tarea__trimestre=trimestre
-            )
-
-            promedio_examenes = notas_examenes.aggregate(Avg('nota'))['nota__avg'] or 0
-            promedio_tareas = notas_tareas.aggregate(Avg('nota'))['nota__avg'] or 0
-
-            # 2. ASISTENCIA
-            asistencias = Asistencia.objects.filter(
-                matriculacion=matriculacion,
-                horario__profesor_materia__materia=materia,
-                horario__trimestre=trimestre
-            )
-
-            total_asistencias = asistencias.count()
-            asistencias_efectivas = asistencias.filter(estado__in=['P', 'T']).count()
-            porcentaje_asistencia = (asistencias_efectivas / total_asistencias * 100) if total_asistencias > 0 else 100
-
-            # Faltas consecutivas máximas
-            faltas_consecutivas = self.calcular_faltas_consecutivas(asistencias)
-
-            # 3. PARTICIPACIÓN
-            participaciones = Participacion.objects.filter(
-                matriculacion=matriculacion,
-                horario__profesor_materia__materia=materia,
-                horario__trimestre=trimestre
-            )
-
-            total_participaciones = participaciones.count()
-            promedio_participaciones = participaciones.aggregate(Avg('valor'))['valor__avg'] or 0
-
-            # 4. TENDENCIAS TEMPORALES
-            # Tendencia de las últimas 5 notas
-            ultimas_notas = list(notas_examenes.order_by('examen__fecha_examen').values_list('nota', flat=True)[-5:])
-            tendencia_notas = self.calcular_tendencia(ultimas_notas)
-
-            # Días transcurridos en el trimestre
-            dias_trimestre = (date.today() - trimestre.fecha_inicio).days
-            progreso_trimestre = min(dias_trimestre / 90, 1.0)  # Normalizar a 0-1
-
-            # 5. CONTEXTO ACADÉMICO
-            # Edad del alumno
-            edad_alumno = self.calcular_edad(alumno.fecha_nacimiento)
-
-            # Dificultad histórica de la materia (promedio general de la materia)
-            dificultad_materia = HistoricoTrimestral.objects.filter(
-                materia=materia,
-                trimestre__gestion=trimestre.gestion
-            ).aggregate(Avg('promedio_trimestre'))['promedio_trimestre__avg'] or 70
-
-            # Normalizar dificultad (0-1, donde 1 = más fácil)
-            dificultad_normalizada = dificultad_materia / 100
-
-            return {
-                # Rendimiento previo
-                'promedio_trimestre_anterior': promedio_anterior,
-                'promedio_examenes_actual': float(promedio_examenes),
-                'promedio_tareas_actual': float(promedio_tareas),
-                'total_examenes': notas_examenes.count(),
-                'total_tareas': notas_tareas.count(),
-
-                # Asistencia
-                'porcentaje_asistencia': porcentaje_asistencia,
-                'total_asistencias': total_asistencias,
-                'faltas_consecutivas_max': faltas_consecutivas,
-
-                # Participación
-                'total_participaciones': total_participaciones,
-                'promedio_participaciones': float(promedio_participaciones),
-
-                # Tendencias
-                'tendencia_notas': tendencia_notas,
-                'progreso_trimestre': progreso_trimestre,
-
-                # Contexto
-                'edad_alumno': edad_alumno,
-                'dificultad_materia': float(dificultad_normalizada),
-
-                # Información adicional
-                'numero_trimestre': trimestre.numero,
-                'semanas_transcurridas': min(dias_trimestre // 7, 12)
-            }
-
-        except Exception as e:
-            print(f"Error extrayendo características para {alumno.matricula}: {e}")
-            return None
-
-    def calcular_faltas_consecutivas(self, asistencias):
-        """Calcula el máximo de faltas consecutivas"""
-        faltas = asistencias.filter(estado='F').order_by('fecha')
-        if not faltas.exists():
-            return 0
-
-        max_consecutivas = 0
-        consecutivas_actuales = 0
-        fecha_anterior = None
-
-        for falta in faltas:
-            if fecha_anterior and (falta.fecha - fecha_anterior).days == 1:
-                consecutivas_actuales += 1
-            else:
-                consecutivas_actuales = 1
-
-            max_consecutivas = max(max_consecutivas, consecutivas_actuales)
-            fecha_anterior = falta.fecha
-
-        return max_consecutivas
-
-    def calcular_tendencia(self, notas):
-        """Calcula tendencia de notas: -1 (descendente), 0 (estable), 1 (ascendente)"""
-        if len(notas) < 2:
-            return 0
-
-        # Calcular diferencias
-        diferencias = [notas[i] - notas[i - 1] for i in range(1, len(notas))]
-        promedio_diferencias = sum(diferencias) / len(diferencias)
-
-        if promedio_diferencias > 2:
-            return 1  # Ascendente
-        elif promedio_diferencias < -2:
-            return -1  # Descendente
-        else:
-            return 0  # Estable
-
-    def calcular_edad(self, fecha_nacimiento):
-        """Calcula edad en años"""
-        if not fecha_nacimiento:
-            return 15  # Edad promedio por defecto
-
-        hoy = date.today()
-        return hoy.year - fecha_nacimiento.year - (
-                    (hoy.month, hoy.day) < (fecha_nacimiento.month, fecha_nacimiento.day))
-
-    def entrenar_modelo(self):
-        """
-        Entrena el modelo Random Forest con datos históricos
-        """
-        print("🤖 Iniciando entrenamiento del modelo ML...")
-
-        # 1. Obtener datos de entrenamiento
-        df = self.obtener_datos_entrenamiento()
-
-        if df.empty:
-            print("❌ No hay datos suficientes para entrenar el modelo")
-            return False
-
-        print(f"📊 Datos de entrenamiento: {len(df)} registros")
-
-        # 2. Preparar características y target
-        self.feature_names = [col for col in df.columns if col != 'nota_real']
-        X = df[self.feature_names].fillna(0)
-        y = df['nota_real']
-
-        # 3. Dividir datos para entrenamiento y validación
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42
-        )
-
-        # 4. Normalizar datos
-        self.scaler = StandardScaler()
-        X_train_scaled = self.scaler.fit_transform(X_train)
-        X_test_scaled = self.scaler.transform(X_test)
-
-        # 5. Entrenar Random Forest
-        self.modelo = RandomForestRegressor(
-            n_estimators=100,
-            max_depth=10,
-            min_samples_split=5,
-            min_samples_leaf=2,
-            random_state=42
-        )
-
-        self.modelo.fit(X_train_scaled, y_train)
-
-        # 6. Evaluar modelo
-        y_pred = self.modelo.predict(X_test_scaled)
-        mae = mean_absolute_error(y_test, y_pred)
-        r2 = r2_score(y_test, y_pred)
-
+        self.modelo_entrenado = True  # Siempre está "entrenado" porque usa reglas simples
         self.precision = {
-            'mae': round(mae, 2),
-            'r2': round(r2, 3),
-            'samples_train': len(X_train),
-            'samples_test': len(X_test)
+            'tipo': 'modelo_basado_en_reglas',
+            'version': '1.0_simple',
+            'descripcion': 'Predicción basada en promedios actuales y tendencias'
         }
-
-        self.modelo_entrenado = True
-
-        print(f"✅ Modelo entrenado exitosamente")
-        print(f"📈 Error medio absoluto: {mae:.2f}")
-        print(f"📊 R² Score: {r2:.3f}")
-
-        return True
 
     def predecir_nota(self, alumno, materia, trimestre=None):
         """
-        Hace una predicción de nota para un alumno en una materia específica
+        Hace una predicción simple basada en datos actuales del alumno
         """
-        if not self.modelo_entrenado:
-            # Intentar entrenar el modelo si no está entrenado
-            if not self.entrenar_modelo():
-                return self._prediccion_fallback(alumno, materia)
+        try:
+            # Obtener gestión y trimestre actual
+            if not trimestre:
+                gestion_activa = Gestion.objects.filter(activa=True).order_by('-anio').first()
+                if not gestion_activa:
+                    return self._prediccion_por_defecto(alumno, materia)
 
-        # Usar trimestre actual si no se especifica
-        if not trimestre:
-            gestion_activa = Gestion.objects.filter(activa=True).first()
-            if not gestion_activa:
-                return self._prediccion_fallback(alumno, materia)
+                # Buscar trimestre actual o el más reciente
+                trimestre = Trimestre.objects.filter(
+                    gestion=gestion_activa,
+                    fecha_inicio__lte=date.today(),
+                    fecha_fin__gte=date.today()
+                ).first()
 
-            trimestre = Trimestre.objects.filter(
-                gestion=gestion_activa,
-                fecha_inicio__lte=date.today(),
-                fecha_fin__gte=date.today()
-            ).first()
+                if not trimestre:
+                    trimestre = Trimestre.objects.filter(
+                        gestion=gestion_activa
+                    ).order_by('-numero').first()
 
             if not trimestre:
-                trimestre = Trimestre.objects.filter(gestion=gestion_activa).first()
+                return self._prediccion_por_defecto(alumno, materia)
 
-        # Extraer características del alumno
-        caracteristicas = self.extraer_caracteristicas_alumno(alumno, materia, trimestre)
+            # Obtener matriculación
+            matriculacion = Matriculacion.objects.filter(
+                alumno=alumno,
+                gestion=trimestre.gestion,
+                activa=True
+            ).first()
 
-        if not caracteristicas:
-            return self._prediccion_fallback(alumno, materia)
+            if not matriculacion:
+                return self._prediccion_por_defecto(alumno, materia)
 
-        # Preparar datos para predicción
-        X = pd.DataFrame([caracteristicas])
-        X = X.reindex(columns=self.feature_names, fill_value=0)
-        X_scaled = self.scaler.transform(X)
+            # Extraer métricas del alumno
+            metricas = self._extraer_metricas_alumno(matriculacion, materia, trimestre)
 
-        # Hacer predicción
-        nota_predicha = self.modelo.predict(X_scaled)[0]
+            # Calcular predicción con reglas simples
+            nota_predicha = self._calcular_prediccion_simple(metricas)
 
-        # Calcular confianza basada en la varianza de los árboles
-        predicciones_arboles = [arbol.predict(X_scaled)[0] for arbol in self.modelo.estimators_]
-        varianza = np.var(predicciones_arboles)
-        confianza = max(0.5, min(0.95, 1 - (varianza / 100)))  # Entre 50% y 95%
+            # Calcular confianza basada en cantidad de datos
+            confianza = self._calcular_confianza(metricas)
 
-        # Determinar factores más importantes
-        importancias = self.modelo.feature_importances_
-        factores_importantes = self._obtener_factores_clave(caracteristicas, importancias)
+            # Clasificar nivel de riesgo
+            nivel_riesgo = self._clasificar_riesgo(nota_predicha, metricas)
 
-        # Clasificar nivel de riesgo
-        nivel_riesgo = self._clasificar_riesgo(nota_predicha, caracteristicas)
+            # Generar factores explicativos
+            factores_importantes = self._generar_factores_importantes(metricas)
 
-        return {
-            'nota_predicha': round(max(0, min(100, nota_predicha)), 2),
-            'confianza': round(confianza * 100, 1),
-            'nivel_riesgo': nivel_riesgo,
-            'factores_importantes': factores_importantes,
-            'caracteristicas_utilizadas': caracteristicas,
-            'metadata': {
-                'modelo_version': '1.0',
-                'precision_mae': self.precision['mae'] if self.precision else None,
-                'fecha_prediccion': date.today().isoformat()
+            return {
+                'nota_predicha': round(max(0, min(100, nota_predicha)), 2),
+                'confianza': round(confianza, 1),
+                'nivel_riesgo': nivel_riesgo,
+                'factores_importantes': factores_importantes,
+                'caracteristicas_utilizadas': metricas,
+                'metadata': {
+                    'modelo_version': '1.0_simple',
+                    'tipo_prediccion': 'reglas_basicas',
+                    'fecha_prediccion': date.today().isoformat(),
+                    'trimestre': f"{trimestre.gestion.anio} - T{trimestre.numero}"
+                }
             }
-        }
 
-    def _prediccion_fallback(self, alumno, materia):
-        """
-        Predicción básica cuando no hay modelo entrenado
-        """
-        # Calcular promedio histórico del alumno
-        historicos = HistoricoTrimestral.objects.filter(
-            alumno=alumno,
-            materia=materia
-        ).order_by('-trimestre__gestion__anio')[:3]
+        except Exception as e:
+            print(f"Error en predicción simple para {alumno.matricula}: {e}")
+            return self._prediccion_por_defecto(alumno, materia)
 
-        if historicos.exists():
-            promedio = sum(h.promedio_trimestre for h in historicos) / len(historicos)
+    def _extraer_metricas_alumno(self, matriculacion, materia, trimestre):
+        """
+        Extrae métricas básicas del alumno para la predicción
+        """
+        metricas = {}
+
+        # 1. NOTAS DE EXÁMENES
+        notas_examenes = NotaExamen.objects.filter(
+            matriculacion=matriculacion,
+            examen__profesor_materia__materia=materia,
+            examen__trimestre=trimestre
+        ).order_by('examen__fecha_examen')
+
+        if notas_examenes.exists():
+            notas_list = [float(ne.nota) for ne in notas_examenes]
+            metricas['promedio_examenes'] = sum(notas_list) / len(notas_list)
+            metricas['total_examenes'] = len(notas_list)
+            metricas['nota_mas_alta'] = max(notas_list)
+            metricas['nota_mas_baja'] = min(notas_list)
+
+            # Tendencia simple: comparar primera y última nota
+            if len(notas_list) >= 2:
+                metricas['tendencia_examenes'] = notas_list[-1] - notas_list[0]
+            else:
+                metricas['tendencia_examenes'] = 0
         else:
-            promedio = 70  # Promedio por defecto
+            metricas['promedio_examenes'] = 0
+            metricas['total_examenes'] = 0
+            metricas['nota_mas_alta'] = 0
+            metricas['nota_mas_baja'] = 0
+            metricas['tendencia_examenes'] = 0
 
-        return {
-            'nota_predicha': float(promedio),
-            'confianza': 60.0,
-            'nivel_riesgo': 'medio' if promedio < 70 else 'bajo',
-            'factores_importantes': ['Sin datos suficientes para análisis detallado'],
-            'caracteristicas_utilizadas': {},
-            'metadata': {
-                'modelo_version': 'fallback',
-                'metodo': 'promedio_historico',
-                'fecha_prediccion': date.today().isoformat()
-            }
-        }
+        # 2. NOTAS DE TAREAS
+        notas_tareas = NotaTarea.objects.filter(
+            matriculacion=matriculacion,
+            tarea__profesor_materia__materia=materia,
+            tarea__trimestre=trimestre
+        )
 
-    def _obtener_factores_clave(self, caracteristicas, importancias):
+        if notas_tareas.exists():
+            promedio_tareas = notas_tareas.aggregate(Avg('nota'))['nota__avg']
+            metricas['promedio_tareas'] = float(promedio_tareas)
+            metricas['total_tareas'] = notas_tareas.count()
+        else:
+            metricas['promedio_tareas'] = 0
+            metricas['total_tareas'] = 0
+
+        # 3. ASISTENCIA
+        asistencias = Asistencia.objects.filter(
+            matriculacion=matriculacion,
+            horario__profesor_materia__materia=materia,
+            horario__trimestre=trimestre
+        )
+
+        total_clases = asistencias.count()
+        if total_clases > 0:
+            presentes = asistencias.filter(estado__in=['P', 'T']).count()
+            faltas = asistencias.filter(estado='F').count()
+
+            metricas['porcentaje_asistencia'] = (presentes / total_clases) * 100
+            metricas['total_faltas'] = faltas
+            metricas['total_clases'] = total_clases
+
+            # Faltas recientes (últimas 2 semanas)
+            fecha_limite = date.today() - timedelta(days=14)
+            faltas_recientes = asistencias.filter(
+                estado='F',
+                fecha__gte=fecha_limite
+            ).count()
+            metricas['faltas_recientes'] = faltas_recientes
+        else:
+            metricas['porcentaje_asistencia'] = 100
+            metricas['total_faltas'] = 0
+            metricas['total_clases'] = 0
+            metricas['faltas_recientes'] = 0
+
+        # 4. PARTICIPACIÓN
+        participaciones = Participacion.objects.filter(
+            matriculacion=matriculacion,
+            horario__profesor_materia__materia=materia,
+            horario__trimestre=trimestre
+        )
+
+        if participaciones.exists():
+            promedio_participacion = participaciones.aggregate(Avg('valor'))['valor__avg']
+            metricas['promedio_participacion'] = float(promedio_participacion)
+            metricas['total_participaciones'] = participaciones.count()
+        else:
+            metricas['promedio_participacion'] = 0
+            metricas['total_participaciones'] = 0
+
+        # 5. MÉTRICAS TEMPORALES
+        dias_transcurridos = (date.today() - trimestre.fecha_inicio).days
+        duracion_trimestre = (trimestre.fecha_fin - trimestre.fecha_inicio).days
+        metricas['progreso_trimestre'] = min(dias_transcurridos / duracion_trimestre,
+                                             1.0) if duracion_trimestre > 0 else 0.5
+
+        # 6. RENDIMIENTO PREVIO (trimestre anterior si existe)
+        trimestre_anterior = Trimestre.objects.filter(
+            gestion=trimestre.gestion,
+            numero=trimestre.numero - 1
+        ).first()
+
+        if trimestre_anterior:
+            # Buscar notas del trimestre anterior para esta materia
+            examenes_anteriores = NotaExamen.objects.filter(
+                matriculacion__alumno=matriculacion.alumno,
+                matriculacion__gestion=trimestre.gestion,
+                examen__profesor_materia__materia=materia,
+                examen__trimestre=trimestre_anterior
+            )
+
+            if examenes_anteriores.exists():
+                metricas['promedio_trimestre_anterior'] = examenes_anteriores.aggregate(Avg('nota'))['nota__avg']
+            else:
+                metricas['promedio_trimestre_anterior'] = 70  # Promedio neutro
+        else:
+            metricas['promedio_trimestre_anterior'] = 70
+
+        return metricas
+
+    def _calcular_prediccion_simple(self, metricas):
         """
-        Identifica los factores más importantes para la predicción
+        Calcula predicción usando reglas simples y pesos
         """
-        factores_con_importancia = list(zip(self.feature_names, importancias))
-        factores_ordenados = sorted(factores_con_importancia, key=lambda x: x[1], reverse=True)
+        prediccion_base = 70  # Nota base neutral
 
-        factores_clave = []
-        for factor, importancia in factores_ordenados[:5]:  # Top 5
-            if importancia > 0.05:  # Solo factores significativos
-                valor = caracteristicas.get(factor, 0)
-                descripcion = self._describir_factor(factor, valor)
-                factores_clave.append({
-                    'factor': factor,
-                    'importancia': round(importancia * 100, 1),
-                    'valor': valor,
-                    'descripcion': descripcion
-                })
+        # 1. PESO DE EXÁMENES (40% del cálculo)
+        if metricas['total_examenes'] > 0:
+            factor_examenes = (metricas['promedio_examenes'] - 70) * 0.4
+            prediccion_base += factor_examenes
 
-        return factores_clave
+        # 2. PESO DE TAREAS (20% del cálculo)
+        if metricas['total_tareas'] > 0:
+            factor_tareas = (metricas['promedio_tareas'] - 70) * 0.2
+            prediccion_base += factor_tareas
 
-    def _describir_factor(self, factor, valor):
+        # 3. PESO DE ASISTENCIA (20% del cálculo)
+        if metricas['porcentaje_asistencia'] < 80:
+            # Penalización por baja asistencia
+            penalizacion_asistencia = (80 - metricas['porcentaje_asistencia']) * 0.3
+            prediccion_base -= penalizacion_asistencia
+        elif metricas['porcentaje_asistencia'] > 95:
+            # Bonus por excelente asistencia
+            prediccion_base += 3
+
+        # 4. PESO DE PARTICIPACIÓN (10% del cálculo)
+        if metricas['total_participaciones'] > 0:
+            if metricas['promedio_participacion'] >= 4:
+                prediccion_base += 2  # Bonus por buena participación
+            elif metricas['promedio_participacion'] <= 2:
+                prediccion_base -= 3  # Penalización por baja participación
+
+        # 5. TENDENCIA DE EXÁMENES (10% del cálculo)
+        if metricas['total_examenes'] >= 2:
+            if metricas['tendencia_examenes'] > 5:
+                prediccion_base += 3  # Tendencia positiva
+            elif metricas['tendencia_examenes'] < -5:
+                prediccion_base -= 3  # Tendencia negativa
+
+        # 6. AJUSTES POR TRIMESTRE ANTERIOR
+        diferencia_anterior = prediccion_base - metricas['promedio_trimestre_anterior']
+        if abs(diferencia_anterior) > 20:
+            # Si la diferencia es muy grande, moderar hacia el promedio anterior
+            prediccion_base = metricas['promedio_trimestre_anterior'] + (diferencia_anterior * 0.7)
+
+        # 7. AJUSTES POR PROGRESO DEL TRIMESTRE
+        if metricas['progreso_trimestre'] < 0.3:
+            # Si estamos al inicio del trimestre, ser más conservador
+            prediccion_base = (prediccion_base + metricas['promedio_trimestre_anterior']) / 2
+
+        # 8. PENALIZACIONES ESPECÍFICAS
+        if metricas['faltas_recientes'] >= 3:
+            prediccion_base -= 5  # Muchas faltas recientes
+
+        if metricas['total_examenes'] == 0 and metricas['progreso_trimestre'] > 0.5:
+            prediccion_base -= 5  # No tiene exámenes y ya pasó la mitad del trimestre
+
+        return prediccion_base
+
+    def _calcular_confianza(self, metricas):
         """
-        Proporciona descripción legible de un factor
+        Calcula la confianza de la predicción basada en datos disponibles
         """
-        descripciones = {
-            'promedio_trimestre_anterior': f"Promedio anterior: {valor:.1f}",
-            'porcentaje_asistencia': f"Asistencia: {valor:.1f}%",
-            'promedio_examenes_actual': f"Promedio exámenes: {valor:.1f}",
-            'promedio_tareas_actual': f"Promedio tareas: {valor:.1f}",
-            'total_participaciones': f"Participaciones: {valor}",
-            'tendencia_notas': f"Tendencia: {'📈 Ascendente' if valor > 0 else '📉 Descendente' if valor < 0 else '➡️ Estable'}",
-            'faltas_consecutivas_max': f"Máx. faltas consecutivas: {valor}"
-        }
+        confianza_base = 50
 
-        return descripciones.get(factor, f"{factor}: {valor}")
+        # Más datos = más confianza
+        if metricas['total_examenes'] >= 3:
+            confianza_base += 20
+        elif metricas['total_examenes'] >= 1:
+            confianza_base += 10
 
-    def _clasificar_riesgo(self, nota_predicha, caracteristicas):
+        if metricas['total_tareas'] >= 3:
+            confianza_base += 15
+        elif metricas['total_tareas'] >= 1:
+            confianza_base += 8
+
+        if metricas['total_clases'] >= 15:
+            confianza_base += 10
+        elif metricas['total_clases'] >= 5:
+            confianza_base += 5
+
+        if metricas['total_participaciones'] >= 3:
+            confianza_base += 5
+
+        # Progreso del trimestre afecta confianza
+        if metricas['progreso_trimestre'] > 0.6:
+            confianza_base += 10
+        elif metricas['progreso_trimestre'] < 0.2:
+            confianza_base -= 10
+
+        return max(30, min(95, confianza_base))
+
+    def _clasificar_riesgo(self, nota_predicha, metricas):
         """
         Clasifica el nivel de riesgo del alumno
         """
         if nota_predicha < 50:
             return 'alto'
-        elif nota_predicha < 70:
+        elif nota_predicha < 65:
+            # Verificar factores adicionales para riesgo medio
+            factores_riesgo = 0
+
+            if metricas['porcentaje_asistencia'] < 80:
+                factores_riesgo += 1
+            if metricas['tendencia_examenes'] < -5:
+                factores_riesgo += 1
+            if metricas['faltas_recientes'] >= 2:
+                factores_riesgo += 1
+
+            if factores_riesgo >= 2:
+                return 'alto'
+            else:
+                return 'medio'
+        elif nota_predicha < 75:
             return 'medio'
         else:
             return 'bajo'
+
+    def _generar_factores_importantes(self, metricas):
+        """
+        Genera explicaciones sobre los factores más importantes
+        """
+        factores = []
+
+        # Factor principal: exámenes
+        if metricas['total_examenes'] > 0:
+            if metricas['promedio_examenes'] >= 80:
+                factores.append({
+                    'factor': 'Exámenes',
+                    'valor': metricas['promedio_examenes'],
+                    'impacto': 'positivo',
+                    'descripcion': f"Excelente promedio en exámenes: {metricas['promedio_examenes']:.1f}"
+                })
+            elif metricas['promedio_examenes'] < 60:
+                factores.append({
+                    'factor': 'Exámenes',
+                    'valor': metricas['promedio_examenes'],
+                    'impacto': 'negativo',
+                    'descripcion': f"Promedio bajo en exámenes: {metricas['promedio_examenes']:.1f}"
+                })
+
+        # Factor asistencia
+        if metricas['porcentaje_asistencia'] < 80:
+            factores.append({
+                'factor': 'Asistencia',
+                'valor': metricas['porcentaje_asistencia'],
+                'impacto': 'negativo',
+                'descripcion': f"Baja asistencia: {metricas['porcentaje_asistencia']:.1f}%"
+            })
+        elif metricas['porcentaje_asistencia'] > 95:
+            factores.append({
+                'factor': 'Asistencia',
+                'valor': metricas['porcentaje_asistencia'],
+                'impacto': 'positivo',
+                'descripcion': f"Excelente asistencia: {metricas['porcentaje_asistencia']:.1f}%"
+            })
+
+        # Factor tendencia
+        if metricas['total_examenes'] >= 2:
+            if metricas['tendencia_examenes'] > 5:
+                factores.append({
+                    'factor': 'Tendencia',
+                    'valor': metricas['tendencia_examenes'],
+                    'impacto': 'positivo',
+                    'descripcion': f"Tendencia ascendente en notas (+{metricas['tendencia_examenes']:.1f})"
+                })
+            elif metricas['tendencia_examenes'] < -5:
+                factores.append({
+                    'factor': 'Tendencia',
+                    'valor': metricas['tendencia_examenes'],
+                    'impacto': 'negativo',
+                    'descripcion': f"Tendencia descendente en notas ({metricas['tendencia_examenes']:.1f})"
+                })
+
+        # Factor participación
+        if metricas['total_participaciones'] > 0:
+            if metricas['promedio_participacion'] >= 4:
+                factores.append({
+                    'factor': 'Participación',
+                    'valor': metricas['promedio_participacion'],
+                    'impacto': 'positivo',
+                    'descripcion': f"Buena participación en clase: {metricas['promedio_participacion']:.1f}/5"
+                })
+            elif metricas['promedio_participacion'] <= 2:
+                factores.append({
+                    'factor': 'Participación',
+                    'valor': metricas['promedio_participacion'],
+                    'impacto': 'negativo',
+                    'descripcion': f"Baja participación en clase: {metricas['promedio_participacion']:.1f}/5"
+                })
+
+        # Factor faltas recientes
+        if metricas['faltas_recientes'] >= 3:
+            factores.append({
+                'factor': 'Faltas recientes',
+                'valor': metricas['faltas_recientes'],
+                'impacto': 'negativo',
+                'descripcion': f"Muchas faltas recientes: {metricas['faltas_recientes']} en 2 semanas"
+            })
+
+        # Si no hay factores específicos, agregar uno general
+        if not factores:
+            factores.append({
+                'factor': 'Rendimiento general',
+                'valor': (metricas['promedio_examenes'] + metricas['promedio_tareas']) / 2,
+                'impacto': 'neutro',
+                'descripcion': 'Rendimiento estable basado en datos disponibles'
+            })
+
+        return factores[:4]  # Máximo 4 factores
+
+    def _prediccion_por_defecto(self, alumno, materia):
+        """
+        Predicción por defecto cuando no hay datos suficientes
+        """
+        return {
+            'nota_predicha': 70.0,
+            'confianza': 40.0,
+            'nivel_riesgo': 'medio',
+            'factores_importantes': [{
+                'factor': 'Datos insuficientes',
+                'valor': 0,
+                'impacto': 'neutro',
+                'descripcion': 'No hay suficientes datos para hacer una predicción precisa'
+            }],
+            'caracteristicas_utilizadas': {},
+            'metadata': {
+                'modelo_version': '1.0_simple',
+                'tipo_prediccion': 'por_defecto',
+                'fecha_prediccion': date.today().isoformat(),
+                'razon': 'datos_insuficientes'
+            }
+        }
 
     def guardar_prediccion(self, alumno, materia, prediccion, trimestre=None):
         """
         Guarda la predicción en la base de datos
         """
         if not trimestre:
-            gestion_activa = Gestion.objects.filter(activa=True).first()
-            trimestre = Trimestre.objects.filter(
-                gestion=gestion_activa,
-                fecha_inicio__lte=date.today(),
-                fecha_fin__gte=date.today()
-            ).first()
+            gestion_activa = Gestion.objects.filter(activa=True).order_by('-anio').first()
+            if gestion_activa:
+                trimestre = Trimestre.objects.filter(
+                    gestion=gestion_activa,
+                    fecha_inicio__lte=date.today(),
+                    fecha_fin__gte=date.today()
+                ).first()
 
-        PrediccionRendimiento.objects.update_or_create(
-            alumno=alumno,
-            gestion=trimestre.gestion if trimestre else None,
-            trimestre=trimestre,
-            materia=materia,
-            defaults={
-                'nota_predicha': prediccion['nota_predicha'],
-                'confianza_prediccion': prediccion['confianza'],
-                'features_utilizados': prediccion['caracteristicas_utilizadas'],
-                'metadata': prediccion['metadata']
-            }
-        )
+                if not trimestre:
+                    trimestre = Trimestre.objects.filter(gestion=gestion_activa).order_by('-numero').first()
+
+        if not trimestre:
+            print(f"No se pudo guardar predicción para {alumno.matricula}: no hay trimestre")
+            return
+
+        try:
+            PrediccionRendimiento.objects.update_or_create(
+                alumno=alumno,
+                gestion=trimestre.gestion,
+                trimestre=trimestre,
+                materia=materia,
+                defaults={
+                    'nota_predicha': prediccion['nota_predicha'],
+                    'confianza_prediccion': prediccion['confianza'],
+                    'features_utilizados': prediccion['caracteristicas_utilizadas'],
+                    'metadata': prediccion['metadata']
+                }
+            )
+            print(f"✅ Predicción guardada: {alumno.matricula} - {materia.codigo}: {prediccion['nota_predicha']}")
+        except Exception as e:
+            print(f"❌ Error guardando predicción para {alumno.matricula}: {e}")
+
+    # Métodos para compatibilidad con el código existente
+    def entrenar_modelo(self):
+        """Compatibility method - el modelo simple no necesita entrenamiento"""
+        return True
+
+    @property
+    def modelo_entrenado(self):
+        """El modelo simple siempre está 'entrenado'"""
+        return True
 
 
 # ********************************************************************************************************
