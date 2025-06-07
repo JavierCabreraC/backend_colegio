@@ -19,7 +19,7 @@ from ..serializers import (
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsProfesor])
+@permission_classes([IsAuthenticated])
 def mis_alumnos_predicciones_dummy_simple(request):
     """
     GET /api/predictions/mis-alumnos-simple/
